@@ -94,13 +94,16 @@
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiries')" id="nav-inquiries">
         <i class="fas fa-inbox w-4 text-slate-400"></i> Inquiries
       </div>
+      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiry-detail')" id="nav-inquiry-detail">
+        <i class="fas fa-file-lines w-4 text-slate-400"></i> Inquiry Detail
+      </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quote-panel')" id="nav-quote-panel">
         <i class="fas fa-calculator w-4 text-slate-400"></i> Quote Panel
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('settings')" id="nav-settings">
         <i class="fas fa-cog w-4 text-slate-400"></i> AI Settings
       </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('report')" id="nav-report">
+      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quality-report')" id="nav-quality-report">
         <i class="fas fa-clipboard-check w-4 text-slate-400"></i> Quality Report
       </div>
     </nav>
@@ -112,6 +115,7 @@
 
   <!-- ===== MAIN CONTENT ===== -->
   <main class="flex-1 overflow-auto min-w-0">
+    <div id="ui-error" role="alert" class="hidden m-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"></div>
 
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="view p-6">
@@ -153,8 +157,11 @@
               <option value="">All</option>
               <option value="New">New</option>
               <option value="Reviewed">Reviewed</option>
+              <option value="Quoting">Quoting</option>
               <option value="Quoted">Quoted</option>
-              <option value="Rejected">Rejected</option>
+              <option value="Negotiating">Negotiating</option>
+              <option value="Won">Won</option>
+              <option value="Lost">Lost</option>
             </select>
           </div>
           <div>
@@ -234,7 +241,7 @@
     <div id="view-inquiries" class="view p-6 hidden">
       <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-900 dark:text-white">Inquiry List</h1>
-        <p class="text-sm text-slate-500 mt-0.5">All inquiries — click a row to open the Quote Panel</p>
+        <p class="text-sm text-slate-500 mt-0.5">All inquiries — click a row to open Inquiry Detail</p>
       </div>
 
       <div class="flex flex-wrap gap-3 items-end mb-4">
@@ -248,8 +255,11 @@
             <option value="">All</option>
             <option value="New">New</option>
             <option value="Reviewed">Reviewed</option>
+            <option value="Quoting">Quoting</option>
             <option value="Quoted">Quoted</option>
-            <option value="Rejected">Rejected</option>
+            <option value="Negotiating">Negotiating</option>
+            <option value="Won">Won</option>
+            <option value="Lost">Lost</option>
           </select>
         </div>
         <div>
@@ -306,6 +316,36 @@
       <div class="text-sm text-slate-500 mt-2" id="inq-count"></div>
     </div>
 
+    <!-- INQUIRY DETAIL VIEW -->
+    <div id="view-inquiry-detail" class="view p-6 hidden">
+      <div id="detail-empty" class="card p-10 text-center text-slate-500 dark:text-slate-400">
+        Select an inquiry to see its details.
+        <button type="button" class="btn btn-secondary mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+      </div>
+      <div id="detail-content" class="hidden">
+        <div id="detail-header" class="mb-6"></div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div class="xl:col-span-2 space-y-4">
+            <div class="card p-5"><h2 class="panel-section-title">Customer Snapshot</h2><div id="detail-customer" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">Product Specifications</h2><div id="detail-specs" class="grid grid-cols-2 gap-3 text-sm"></div></div>
+            <div class="card p-5" id="detail-history-card"><h2 class="panel-section-title">Quote History Timeline</h2><div id="detail-quote-history"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">AI Processing Trail</h2><div id="detail-current-state" class="mb-3 text-sm font-semibold"></div><div id="detail-activities"></div></div>
+          </div>
+          <div class="space-y-4">
+            <div class="card p-5"><h2 class="panel-section-title">Quick Actions</h2><div id="detail-actions" class="flex flex-col items-start gap-3"></div>
+              <div id="detail-reject-form" class="hidden mt-4">
+                <label for="detail-reject-reason" class="block text-sm mb-2">Rejection reason</label>
+                <textarea id="detail-reject-reason" class="input-field" rows="3" placeholder="Enter a reason..."></textarea>
+                <button type="button" class="btn btn-danger btn-sm mt-2" onclick="confirmDetailReject()">Confirm Rejection</button>
+                <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="cancelDetailReject()">Cancel</button>
+              </div>
+            </div>
+            <div class="card p-5"><h2 class="panel-section-title">Metadata</h2><div id="detail-metadata" class="space-y-3 text-sm"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- QUOTE PANEL VIEW -->
     <div id="view-quote-panel" class="view p-6 hidden">
       <div class="mb-6">
@@ -320,7 +360,7 @@
           <div id="qp-empty" class="card p-10 text-center">
             <i class="fas fa-inbox text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
             <div class="text-slate-500 dark:text-slate-400 text-sm">Select an inquiry to begin quoting</div>
-            <button class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+            <button type="button" class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
           </div>
 
           <!-- Buyer Info (shown when inquiry selected) -->
@@ -387,41 +427,16 @@
               <div class="flex justify-between items-center mb-4">
                 <div class="panel-section-title mb-0">AI-Generated Quote</div>
                 <div class="flex gap-2">
-                  <button class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> Regenerate</button>
-                  <button class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> Print</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> Regenerate</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> Print</button>
                 </div>
               </div>
 
-              <div class="space-y-2 mb-4">
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-500 dark:text-slate-400">Material Cost</span>
-                  <span class="text-slate-700 dark:text-slate-200" id="q-matcost">$0</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-500 dark:text-slate-400">Labor Cost</span>
-                  <span class="text-slate-700 dark:text-slate-200" id="q-labcost">$0</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-500 dark:text-slate-400">Logistics (FOB China)</span>
-                  <span class="text-slate-700 dark:text-slate-200" id="q-logistics">$0</span>
-                </div>
-                <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2">
-                  <span class="text-slate-500 dark:text-slate-400">Subtotal</span>
-                  <span class="text-slate-700 dark:text-slate-200" id="q-subtotal">$0</span>
-                </div>
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-500 dark:text-slate-400">Margin (<span id="q-marginpct">20</span>%)</span>
-                  <span class="text-slate-700 dark:text-slate-200" id="q-margin">$0</span>
-                </div>
-                <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2 font-bold">
-                  <span class="text-slate-800 dark:text-slate-100">Total (FOB)</span>
-                  <span class="text-indigo-600 dark:text-indigo-400 text-lg" id="q-total">$0</span>
-                </div>
-                <div class="flex justify-between text-sm mt-1">
-                  <span class="text-slate-500 dark:text-slate-400">Target (USD/sqm)</span>
-                  <span class="text-slate-700 dark:text-slate-200" id="q-unitprice">$0</span>
-                </div>
-              </div>
+              <div id="q-breakdown" class="space-y-2 mb-4"></div>
+              <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2"><span id="q-subtotal">$0</span><span>Subtotal</span></div>
+              <div class="flex justify-between text-sm font-bold mt-3"><span id="q-total" class="text-indigo-600 dark:text-indigo-400 text-lg">$0</span><span>Total (FOB)</span></div>
+              <div class="flex justify-between text-sm mt-2 mb-4"><span id="q-unitprice">$0</span><span>USD/sqm</span></div>
+              <div id="q-warnings" class="text-sm text-amber-700 dark:text-amber-300 mb-3" role="status"></div>
 
               <!-- Edit Mode -->
               <div id="q-edit-area" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 mb-4">
@@ -432,7 +447,7 @@
                     <input type="number" class="input-field" id="edit-matcost" value="0">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Labor Cost ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Craft / Labor Cost ($)</label>
                     <input type="number" class="input-field" id="edit-labcost" value="0">
                   </div>
                   <div>
@@ -440,21 +455,25 @@
                     <input type="number" class="input-field" id="edit-logistics" value="0">
                   </div>
                   <div>
+                    <label for="edit-compliance" class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Compliance ($)</label>
+                    <input type="number" class="input-field" id="edit-compliance" value="0" min="0" step="0.01">
+                  </div>
+                  <div>
                     <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Margin %</label>
                     <input type="number" class="input-field" id="edit-marginpct" value="20">
                   </div>
                 </div>
                 <div class="mt-3 flex gap-2">
-                  <button class="btn btn-primary btn-sm" onclick="applyEdit()">Apply</button>
-                  <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="applyEdit()">Apply</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
                 </div>
               </div>
 
               <!-- Actions -->
               <div class="flex gap-2 flex-wrap" id="q-actions">
-                <button class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
-                <button class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
-                <button class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>
+                <button type="button" class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
+                <button type="button" class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
+                <button type="button" class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>
               </div>
 
               <!-- Reject Form -->
@@ -462,13 +481,16 @@
                 <div class="text-xs font-bold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">Rejection Reason</div>
                 <textarea class="input-field mb-3" rows="3" placeholder="Enter reason for rejection..." id="reject-reason"></textarea>
                 <div class="flex gap-2">
-                  <button class="btn btn-danger btn-sm" onclick="confirmReject()">Confirm Rejection</button>
-                  <button class="btn btn-secondary btn-sm" onclick="cancelReject()">Cancel</button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject()">Confirm Rejection</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelReject()">Cancel</button>
                 </div>
               </div>
 
               <div class="mt-3 text-xs text-slate-400 dark:text-slate-500" id="q-meta"></div>
             </div>
+
+            <div class="card p-5 mt-4"><div class="panel-section-title">Risk Flags</div><div id="q-risk-flags" class="text-sm text-red-600 dark:text-red-400"></div></div>
+            <div class="card p-5 mt-4"><div class="panel-section-title">Citations</div><div id="q-citations" class="text-sm text-green-600 dark:text-green-400"></div></div>
 
             <!-- Quote History -->
             <div class="card p-5" id="q-history-card">
@@ -562,6 +584,8 @@
         <div class="card p-5">
           <div class="panel-section-title">AI Model &amp; Behavior</div>
           <div class="space-y-4">
+            <div><label for="s-ai-provider" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Provider</label><select id="s-ai-provider" class="input-field"></select></div>
+            <div><label for="s-ai-api-key" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">API Key (memory only)</label><input id="s-ai-api-key" type="password" class="input-field" autocomplete="off" placeholder="This key stays in memory only"><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">LLM routes are placeholders. Use a placeholder value for this demo.</p></div>
             <div>
               <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Model</label>
               <select class="input-field" id="s-ai-model">
@@ -596,14 +620,15 @@
     </div>
 
     <!-- QUALITY REPORT VIEW -->
-    <div id="view-report" class="view p-6 hidden">
+    <div id="view-quality-report" class="view p-6 hidden">
       <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-900 dark:text-white">Quality Inspection Report</h1>
         <p class="text-sm text-slate-500 mt-0.5">Quote processing metrics &amp; inspector performance</p>
+        <button type="button" class="btn btn-secondary mt-3" onclick="exportQualityJSON()">Export JSON</button>
       </div>
 
       <!-- Summary Cards -->
-      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
         <div class="stat-card">
           <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Quotes</div>
           <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-total">0</div>
@@ -620,6 +645,7 @@
           <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Processing Time</div>
           <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-avgtime">0m</div>
         </div>
+        <div class="stat-card"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Quality Score</div><div id="r-avgquality" class="text-2xl font-bold text-slate-900 dark:text-white">0</div></div>
       </div>
 
       <!-- Quote Records Table -->
@@ -631,7 +657,7 @@
           <table class="data-table w-full">
             <thead>
               <tr>
-                <th>Inquiry ID</th><th>Company</th><th>Product</th><th>Quote Amount</th><th>Status</th><th>Processing Time</th><th>Inspector</th><th>Date</th>
+                <th>Inquiry ID</th><th>Company</th><th>Product</th><th>Quote Amount</th><th>Status</th><th>Processing Time</th><th>Inspector</th><th>Date</th><th>Quality / Deductions</th>
               </tr>
             </thead>
             <tbody id="report-table-body"></tbody>
@@ -654,7 +680,112 @@
     <div id="print-content"></div>
   </div>
 
+  <div id="inquiry-status-popover" popover class="hidden card p-5 fixed top-24 right-6 m-0 max-w-sm max-h-96 overflow-auto text-slate-800 dark:text-slate-100">
+    <div class="flex justify-between items-center gap-4 mb-3"><h2 class="panel-section-title mb-0">Status Transition History</h2><button type="button" class="btn btn-secondary btn-sm" onclick="closeStatusHistory()" aria-label="Close status history">Close</button></div>
+    <div id="inquiry-status-history"></div>
+  </div>
+
 <script>
+// Provider boundary: deterministic mock/rules today; no outbound LLM requests.
+(function (root) {
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const round = value => Math.round(value * 100) / 100;
+  function quantity(inq) {
+    const qty = Number(String(inq.qty).replace(/[^0-9.]/g, ''));
+    if (!Number.isFinite(qty) || qty <= 0) throw new Error('Quantity must be positive');
+    return qty;
+  }
+  function calculate(inq, config, source) {
+    const qty = quantity(inq);
+    ['matCost', 'labor', 'logisticsBase', 'containerSqm', 'margin'].forEach(key => {
+      if (!Number.isFinite(config[key]) || config[key] < 0) throw new Error('Invalid pricing setting: ' + key);
+    });
+    if (!config.containerSqm) throw new Error('Container size must be positive');
+    const tier = source === 'rules' && config.matRule === 'tiered' && qty >= 5000 ? 0.95 : 1;
+    const material = round(qty * config.matCost * tier);
+    const craft = round(qty * config.labor);
+    const containerCount = Math.max(1, Math.ceil(qty / config.containerSqm));
+    const logistics = round(containerCount * config.logisticsBase);
+    const requirements = [];
+    if (/\bCE\b/i.test(inq.notes || '') || inq.country === 'Germany') requirements.push(['CE', 150]);
+    if (/\bSGS\b/i.test(inq.notes || '')) requirements.push(['SGS', 200]);
+    if (/\bLC\b/i.test(inq.notes || '')) requirements.push(['LC', 100]);
+    if (/fire rating/i.test(inq.notes || '')) requirements.push(['Fire rating', 150]);
+    // Mock preserves the old labor/logistics/margin calculation, including zero compliance.
+    const compliance = source === 'rules' ? requirements.reduce((sum, item) => sum + item[1], 0) : 0;
+    const subtotal = round(material + craft + logistics + compliance);
+    const percent = clamp(config.margin + (config.adjustments[inq.country] || 0), 5, 50);
+    const margin = Math.round(subtotal * percent / 100);
+    const total = round(subtotal + margin);
+    const riskFlags = [];
+    if (qty >= 5000 && percent < 10) riskFlags.push('high-quantity-low-margin');
+    if (/ASAP|urgent|cheap|lowest|敏感/i.test(inq.notes || '')) riskFlags.push('buyer-risk-word');
+    if (requirements.length) riskFlags.push(source === 'rules' ? 'compliance-estimate-needs-review' : 'compliance-not-priced');
+    if (/\bCIF\b/i.test(inq.notes || '')) riskFlags.push('requested-cif-quoted-fob');
+    if (config.matRule === 'formula') riskFlags.push('custom-formula-not-configured');
+    return {
+      material: { amount: material, reason: `${qty} sqm × $${config.matCost}/sqm${tier < 1 ? ' × 95% bulk tier' : ''}; ${config.matRule === 'formula' ? 'formula unavailable, fixed-rate fallback' : 'configured material rate'}.`, confidence: 0.9, sourceQuotes: [] },
+      craft: { amount: craft, reason: `${qty} sqm × $${config.labor}/sqm configured labor rate; ${inq.surface} finish.`, confidence: 0.85 },
+      logistics: { amount: logistics, reason: `${containerCount} containers × $${config.logisticsBase}; capacity ${config.containerSqm} sqm; FOB China estimate for ${inq.country}.`, confidence: 0.8, containerCount },
+      compliance: { amount: compliance, reason: source === 'mock' ? 'Legacy mock excludes compliance fees; review CE/SGS/LC requirements separately.' : requirements.length ? `Mock fee assumptions: ${requirements.map(([name, fee]) => name + ' $' + fee).join(', ')}; confirm before use.` : 'No CE/SGS/LC/fire requirement identified; no estimated fee.', confidence: 0.6 },
+      margin: { amount: margin, percent, reason: `${config.margin}% default + ${config.adjustments[inq.country] || 0}% region adjustment, bounded to 5–50%.`, min: 5, max: 50 },
+      subtotal, total, unitPrice: round(total / qty), overallConfidence: 0.79,
+      riskFlags, citations: [
+        { field: 'quantity', value: inq.qty, source },
+        { field: 'material.rate', value: config.matCost, source },
+        { field: 'craft.rate', value: config.labor, source },
+        { field: 'logistics.containerSqm', value: config.containerSqm, source },
+        { field: 'margin.percent', value: percent, source }
+      ], provider: source, generatedAt: new Date().toISOString(), processingMs: 0
+    };
+  }
+  function mockProvider(inq, config) { return calculate(inq, config, 'mock'); }
+  function rulesProvider(inq, config) { return calculate(inq, config, 'rules'); }
+  function llmProvider(inq, config, opts = {}) {
+    if (!config.aiApiKey) throw new Error('API key not configured');
+    // HTTP POST placeholder contract only. Never fetch or attach/persist the in-memory key.
+    // Future adapter: POST opts.baseUrl + provider-specific path, body {model, inquiry}.
+    const postPlaceholder = { method: 'POST', baseUrl: opts.baseUrl || '', model: config.aiModel };
+    void postPlaceholder;
+    return { ...mockProvider(inq, config), provider: 'llm', warnings: ['LLM provider not configured'] };
+  }
+  const aiProviders = {
+    mock: { label: 'Mock', fn: mockProvider, needsKey: false },
+    rules: { label: 'Rules', fn: rulesProvider, needsKey: false },
+    llm: { label: 'LLM placeholder', fn: llmProvider, needsKey: true },
+    openai: { label: 'OpenAI', fn: llmProvider, needsKey: true, baseUrl: 'https://api.openai.com/v1' },
+    anthropic: { label: 'Anthropic', fn: llmProvider, needsKey: true, baseUrl: 'https://api.anthropic.com' },
+    openrouter: { label: 'OpenRouter', fn: llmProvider, needsKey: true, baseUrl: 'https://openrouter.ai/api/v1' },
+    minimax: { label: 'MiniMax', fn: llmProvider, needsKey: true, baseUrl: 'https://api.minimax.chat/v1' }
+  };
+  async function quoteInquiry(inq, config, opts = {}) {
+    const provider = aiProviders[config.aiProvider || 'mock'];
+    if (!provider) throw new Error('Unknown AI provider');
+    const start = performance.now();
+    const result = await provider.fn(inq, config, { ...opts, baseUrl: provider.baseUrl });
+    result.processingMs = Math.max(0, Math.round(performance.now() - start));
+    return result;
+  }
+  function upgradeLegacyQuote(quote, inq) {
+    if (!quote || typeof quote.material === 'object') return quote;
+    const result = {
+      material: { amount: quote.material, reason: 'Imported legacy mock material amount.', confidence: 0.7, sourceQuotes: [] },
+      craft: { amount: quote.labor, reason: 'Imported legacy labor amount.', confidence: 0.7 },
+      logistics: { amount: quote.logistics, reason: 'Imported legacy logistics amount; container count unavailable.', confidence: 0.5, containerCount: null },
+      compliance: { amount: 0, reason: 'Not priced in legacy mock.', confidence: 0 },
+      margin: { amount: quote.margin, percent: quote.marginPct, reason: 'Imported legacy margin.', min: 5, max: 50 },
+      subtotal: quote.material + quote.labor + quote.logistics, total: quote.total,
+      unitPrice: round(quote.total / quantity(inq)), overallConfidence: 0.5,
+      riskFlags: ['legacy-compliance-not-priced'], citations: [{ field: 'total', value: quote.total, source: 'mock' }],
+      provider: 'mock', generatedAt: inq.date + 'T00:00:00.000Z', processingMs: 0
+    };
+    if (result.subtotal + quote.margin !== quote.total) result.riskFlags.push('legacy-total-mismatch');
+    return result;
+  }
+  root.aiQuoteEngine = { quoteInquiry, mockProvider, rulesProvider, llmProvider, upgradeLegacyQuote, quantity };
+  root.quoteInquiry = quoteInquiry;
+  root.aiProviders = aiProviders;
+})(window);
 // ============================================================
 // DATA LAYER
 // ============================================================
@@ -662,8 +793,9 @@
 const PRODUCTS = ['WPC Wall Panel', 'SPC Flooring', 'UV Panel', 'WPC Ceiling'];
 const COUNTRIES = ['UAE', 'Saudi Arabia', 'USA', 'UK', 'Nigeria', 'Egypt', 'Philippines', 'Vietnam', 'Germany', 'Australia'];
 const INTENTS = ['Cold', 'Warm', 'Hot', 'High Intent'];
-const STATUSES = ['New', 'Reviewed', 'Quoted', 'Rejected'];
-const STATUS_COLORS = { New: '#64748b', Reviewed: '#2563eb', Quoted: '#16a34a', Rejected: '#dc2626' };
+const STATUSES = ['New', 'Reviewed', 'Quoting', 'Quoted', 'Negotiating', 'Won', 'Lost'];
+window.STATUSES = STATUSES;
+const STATUS_COLORS = { New: '#64748b', Reviewed: '#2563eb', Quoting: '#6366f1', Quoted: '#16a34a', Negotiating: '#fb923c', Won: '#16a34a', Lost: '#dc2626' };
 
 // Mock inquiries — 18 records
 const MOCK_INQUIRIES = [
@@ -704,20 +836,73 @@ function init() {
   inquiries = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(MOCK_INQUIRIES));
 
   const savedSettings = localStorage.getItem('witop_settings');
-  settings = savedSettings ? JSON.parse(savedSettings) : getDefaultSettings();
+  settings = { ...getDefaultSettings(), ...(savedSettings ? JSON.parse(savedSettings) : {}), aiApiKey: '' };
 
   const savedRecords = localStorage.getItem('witop_records');
   quoteRecords = savedRecords ? JSON.parse(savedRecords) : [];
 
+  normalizeInquiries();
   persist();
   applySettings();
   renderDashboard();
   showView('dashboard');
 }
 
+const LEGAL_TRANSITIONS = {
+  New: ['Reviewed', 'Lost'], Reviewed: ['Quoting', 'Lost'], Quoting: ['Quoted', 'Lost'],
+  Quoted: ['Negotiating', 'Quoting', 'Lost'], Negotiating: ['Won', 'Lost', 'Quoting'], Won: [], Lost: []
+};
+function normalizeInquiries() {
+  inquiries.forEach(inq => {
+    inq.activities = inq.activities || [];
+    if (inq.status === 'Rejected') {
+      appendActivity(inq, 'legacy_migration', 'Rejected', 'Lost', 'Mock import', 'Legacy Rejected status mapped to Lost');
+      inq.status = 'Lost';
+    }
+    if (!inq.activities.length) appendActivity(inq, 'import', null, inq.status, 'Mock import', 'Imported mock snapshot; earlier transitions unavailable');
+    inq.quoteHistory = inq.quoteHistory || [];
+    inq.quoteBreakdown = window.aiQuoteEngine.upgradeLegacyQuote(inq.quoteBreakdown, inq);
+  });
+}
+function appendActivity(inq, type, fromState, toState, actor, note) {
+  inq.activities.push({ ts: new Date().toISOString(), type, fromState, toState, actor, note });
+}
+function transitionInquiry(id, fromState, toState, actor, note) {
+  const inq = inquiries.find(i => i.id === id);
+  if (!inq || inq.status !== fromState || !(LEGAL_TRANSITIONS[fromState] || []).includes(toState)) {
+    const error = new Error('Illegal transition: ' + fromState + ' → ' + toState);
+    showUIError(error);
+    throw error;
+  }
+  if (toState === 'Lost' && !String(note || '').trim()) {
+    const error = new Error('A reason is required to mark Lost');
+    showUIError(error); throw error;
+  }
+  clearUIError();
+  inq.status = toState;
+  appendActivity(inq, 'transition', fromState, toState, actor, note || '');
+  persist();
+  return inq;
+}
+window.transitionInquiry = transitionInquiry;
+function prepareQuoting(inq, note) {
+  if (inq.status === 'New') transitionInquiry(inq.id, 'New', 'Reviewed', 'James Zheng', 'Reviewed before quoting');
+  if (inq.status !== 'Quoting') transitionInquiry(inq.id, inq.status, 'Quoting', 'James Zheng', note);
+}
+function changeSelectedState(toState) {
+  if (!selectedInquiry) return;
+  try { transitionInquiry(selectedInquiry.id, selectedInquiry.status, toState, 'James Zheng', 'Manual lifecycle update'); refreshInquiryViews(); }
+  catch (error) { showUIError(error); }
+}
+function markReviewed() { changeSelectedState('Reviewed'); }
+function startNegotiating() { changeSelectedState('Negotiating'); }
+function markWon() { changeSelectedState('Won'); }
+function showDetailRejectForm() { document.getElementById('detail-reject-form').classList.remove('hidden'); }
+
 function persist() {
   localStorage.setItem('witop_inquiries', JSON.stringify(inquiries));
-  localStorage.setItem('witop_settings', JSON.stringify(settings));
+  const { aiApiKey, ...persistedSettings } = settings;
+  localStorage.setItem('witop_settings', JSON.stringify(persistedSettings));
   localStorage.setItem('witop_records', JSON.stringify(quoteRecords));
 }
 
@@ -729,6 +914,8 @@ function getDefaultSettings() {
     labor: 3.00,
     logisticsBase: 3500,
     containerSqm: 700,
+    aiProvider: 'mock',
+    aiApiKey: '',
     aiModel: 'gpt-4o',
     confidence: 0.7,
     autoQuote: 'high',
@@ -737,6 +924,9 @@ function getDefaultSettings() {
 }
 
 function applySettings() {
+  document.getElementById('s-ai-provider').innerHTML = Object.entries(window.aiProviders).map(([id, provider]) => `<option value="${id}">${provider.label}</option>`).join('');
+  document.getElementById('s-ai-provider').value = settings.aiProvider;
+  document.getElementById('s-ai-api-key').value = settings.aiApiKey;
   document.getElementById('s-margin').value = settings.margin;
   document.getElementById('s-mat-rule').value = settings.matRule;
   document.getElementById('s-mat-cost').value = settings.matCost;
@@ -757,6 +947,7 @@ function applySettings() {
 // ============================================================
 
 function showView(name) {
+  if (name === 'report') name = 'quality-report';
   currentView = name;
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   document.getElementById('view-' + name).classList.remove('hidden');
@@ -767,8 +958,9 @@ function showView(name) {
   if (name === 'dashboard') renderDashboard();
   else if (name === 'inquiries') renderInquiries();
   else if (name === 'settings') renderSettings();
-  else if (name === 'report') renderReport();
-  else if (name === 'quote-panel') { /* keep current selection */ }
+  else if (name === 'quality-report') renderReport();
+  else if (name === 'inquiry-detail') renderInquiryDetail();
+  else if (name === 'quote-panel' && selectedInquiry) openQuotePanelContent(selectedInquiry);
 }
 
 // ============================================================
@@ -780,7 +972,7 @@ function renderDashboard() {
   const filtered = filterInquiries(inquiries, fs);
 
   const total = inquiries.length;
-  const handled = inquiries.filter(i => i.status === 'Quoted' || i.status === 'Rejected').length;
+  const handled = inquiries.filter(i => ['Quoted', 'Negotiating', 'Won', 'Lost'].includes(i.status)).length;
   const highIntent = inquiries.filter(i => i.intent === 'High Intent').length;
   const unhandled = inquiries.filter(i => i.status === 'New').length;
 
@@ -790,12 +982,7 @@ function renderDashboard() {
   document.getElementById('stat-unhandled').textContent = unhandled.toLocaleString();
 
   // Funnel
-  const stages = [
-    { label: 'New', count: inquiries.filter(i => i.status === 'New').length, color: '#64748b' },
-    { label: 'Reviewed', count: inquiries.filter(i => i.status === 'Reviewed').length, color: '#2563eb' },
-    { label: 'Quoted', count: inquiries.filter(i => i.status === 'Quoted').length, color: '#16a34a' },
-    { label: 'Rejected', count: inquiries.filter(i => i.status === 'Rejected').length, color: '#dc2626' },
-  ];
+  const stages = STATUSES.map(status => ({ label: status, count: inquiries.filter(i => i.status === status).length, color: STATUS_COLORS[status] }));
   const maxCount = Math.max(...stages.map(s => s.count), 1);
   const funnelHTML = stages.map(s => {
     const pct = Math.max((s.count / maxCount) * 100, 8);
@@ -888,13 +1075,13 @@ function sortInquiries(col) {
 
 function tableRowHTML(i) {
   const sel = selectedInquiry && selectedInquiry.id === i.id ? 'selected' : '';
-  return `<tr class="${sel}" onclick="openQuotePanel('${i.id}')">
+  return `<tr class="${sel}" onclick="openInquiryDetail('${i.id}')">
     <td class="font-mono text-xs text-slate-500">${i.id}</td>
     <td class="font-medium text-slate-900 dark:text-white">${escHtml(i.company)}</td>
     <td>${flag(i.country)} ${i.country}</td>
     <td class="text-slate-600 dark:text-slate-300">${i.product}</td>
     <td>${intentBadge(i.intent)}</td>
-    <td><span class="inline-flex items-center gap-1.5"><span class="status-dot" style="background:${STATUS_COLORS[i.status]}"></span>${i.status}</span></td>
+    <td><button type="button" class="btn btn-secondary btn-sm" onclick="openStatusHistory('${i.id}', event)" aria-label="View ${i.id} status history"><span class="status-dot" style="background:${STATUS_COLORS[i.status]}"></span>${i.status} <i class="fas fa-angle-down text-xs"></i></button></td>
     <td class="text-slate-500 text-xs">${i.date}</td>
     <td class="font-semibold text-slate-900 dark:text-white">${i.quoteAmount ? '$' + i.quoteAmount.toLocaleString() : '—'}</td>
   </tr>`;
@@ -914,11 +1101,100 @@ function flag(country) {
 // QUOTE PANEL
 // ============================================================
 
+function showUIError(error) {
+  const el = document.getElementById('ui-error');
+  el.textContent = error.message;
+  el.classList.remove('hidden');
+}
+function clearUIError() { document.getElementById('ui-error').classList.add('hidden'); }
+function openStatusHistory(id, event) {
+  event.stopPropagation();
+  const inq = inquiries.find(i => i.id === id);
+  if (!inq) return;
+  document.getElementById('inquiry-status-history').innerHTML = activityHTML(inq);
+  const popover = document.getElementById('inquiry-status-popover');
+  popover.classList.remove('hidden');
+  if (popover.showPopover) popover.showPopover();
+  else { popover.removeAttribute('popover'); popover.classList.remove('hidden'); }
+}
+function closeStatusHistory() {
+  const popover = document.getElementById('inquiry-status-popover');
+  if (popover.hidePopover) popover.hidePopover();
+  popover.classList.add('hidden');
+}
+function openInquiryDetail(id) {
+  const inq = inquiries.find(i => i.id === id);
+  if (!inq) return;
+  selectedInquiry = inq;
+  cancelEdit(); cancelReject(); cancelDetailReject(); clearUIError();
+  showView('inquiry-detail');
+}
+function detailFields(fields) {
+  return fields.map(([label, value]) => `<div><div class="text-xs text-slate-500 dark:text-slate-400">${escHtml(label)}</div><div class="mt-1 break-words">${escHtml(String(value || '—'))}</div></div>`).join('');
+}
+function quoteHistoryHTML(inq) {
+  const history = inq.quoteHistory || [];
+  if (!history.length) return '<p class="text-sm text-slate-400 dark:text-slate-500">No quotes yet. Generate a quote when ready.</p>';
+  return `<ol class="border-l border-slate-200 dark:border-slate-600 ml-2">${history.map(h => `
+    <li class="pl-4 py-3 border-b border-slate-100 dark:border-slate-700">
+      <span class="inline-block rounded-full w-2 h-2 bg-brand-500 mr-2"></span><span class="font-semibold text-sm">${money(h.amount)} · ${escHtml(h.status)}</span>
+      <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">${escHtml(h.date)}</div>
+      <div class="text-sm text-slate-600 dark:text-slate-300 mt-1">${escHtml(h.reason || (h.status === 'Rejected' ? inq.rejectionReason : '') || 'Imported mock quote; reason unavailable')}</div>
+    </li>`).join('')}</ol>`;
+}
+function activityHTML(inq) {
+  return inq.activities.length ? `<ol class="space-y-3">${inq.activities.map(a => `
+    <li class="text-xs border-b border-slate-100 dark:border-slate-700 pb-2">
+      <div class="font-semibold">${escHtml(a.fromState || 'Imported')} → ${escHtml(a.toState)} · ${escHtml(a.type)}</div>
+      <div class="text-slate-500 dark:text-slate-400 mt-1">${escHtml(a.actor)} · ${escHtml(a.ts)}</div>
+      <div class="mt-1 break-words">${escHtml(a.note)}</div>
+    </li>`).join('')}</ol>` : '<p class="text-sm text-slate-400">No processing activities yet.</p>';
+}
+function renderInquiryDetail() {
+  const inq = selectedInquiry;
+  document.getElementById('detail-empty').classList.toggle('hidden', !!inq);
+  document.getElementById('detail-content').classList.toggle('hidden', !inq);
+  if (!inq) return;
+  document.getElementById('detail-header').innerHTML = `<h1 class="text-xl font-bold text-slate-900 dark:text-white">${escHtml(inq.id)} · ${escHtml(inq.company)}</h1>
+    <div class="flex flex-wrap items-center gap-3 mt-2 text-sm">${flag(inq.country)} ${escHtml(inq.country)} ${intentBadge(inq.intent)} <span class="status-dot" style="background:${STATUS_COLORS[inq.status]}"></span>${escHtml(inq.status)} <span class="text-slate-500">${escHtml(inq.date)}</span></div>`;
+  document.getElementById('detail-customer').innerHTML = detailFields([['Contact', inq.contact], ['Email', inq.email], ['Import History', inq.history], ['Notes', inq.notes]]);
+  document.getElementById('detail-specs').innerHTML = detailFields(['product', 'qty', 'thickness', 'width', 'length', 'surface', 'color'].map(f => [f === 'qty' ? 'Quantity' : f.charAt(0).toUpperCase() + f.slice(1), inq[f]]));
+  document.getElementById('detail-quote-history').innerHTML = quoteHistoryHTML(inq);
+  document.getElementById('detail-current-state').textContent = 'Current state: ' + inq.status + ' · ' + STATUSES.slice(0, 5).join(' → ') + ' → Won | Lost';
+  document.getElementById('detail-activities').innerHTML = activityHTML(inq);
+  const closed = ['Won', 'Lost'].includes(inq.status);
+  document.getElementById('detail-actions').innerHTML = `
+    ${!inq.quoteBreakdown && !closed ? '<button type="button" class="btn btn-primary" onclick="regenerateQuote()">Generate Quote</button>' : ''}
+    ${inq.quoteBreakdown && !closed ? '<button type="button" class="btn btn-secondary" onclick="editDetailQuote()">Edit Quote</button>' : ''}
+    <button type="button" class="btn btn-secondary" onclick="document.getElementById('detail-history-card').scrollIntoView({behavior:'smooth'})">View Quote History</button>
+    ${inq.status === 'New' ? '<button type="button" class="btn btn-success" onclick="markReviewed()">Mark Reviewed</button>' : ''}
+    ${!closed ? '<button type="button" class="btn btn-danger" onclick="showDetailRejectForm()">Reject</button>' : ''}
+    ${inq.status === 'Quoted' ? '<button type="button" class="btn btn-primary" onclick="startNegotiating()">Start Negotiating</button>' : ''}
+    ${inq.status === 'Negotiating' ? '<button type="button" class="btn btn-success" onclick="markWon()">Mark Won</button>' : ''}`;
+  const last = inq.activities[inq.activities.length - 1];
+  const due = new Date(new Date(inq.date + 'T00:00:00Z').getTime() + 86400000).toISOString();
+  document.getElementById('detail-metadata').innerHTML = detailFields([['Source Channel', 'Mock web inquiry'], ['First Response Due', due + ' (mock: +24h)'], ['Last Activity', last ? last.ts : inq.date], ['Risk Flags', inq.quoteBreakdown ? inq.quoteBreakdown.riskFlags.join(', ') || 'None' : 'Not assessed — no quote']]);
+}
+function editDetailQuote() { openQuotePanel(selectedInquiry.id); showEditForm(); }
+function cancelDetailReject() {
+  document.getElementById('detail-reject-form').classList.add('hidden');
+  document.getElementById('detail-reject-reason').value = '';
+}
+function confirmDetailReject() {
+  if (!selectedInquiry) return;
+  try { rejectInquiry(selectedInquiry, document.getElementById('detail-reject-reason').value); cancelDetailReject(); }
+  catch (error) { showUIError(error); }
+}
+
 function openQuotePanel(id) {
   const inq = inquiries.find(i => i.id === id);
   if (!inq) return;
   selectedInquiry = inq;
-
+  cancelEdit(); cancelReject(); clearUIError();
+  openQuotePanelContent(inq);
+  showView('quote-panel');
+}
+function openQuotePanelContent(inq) {
   document.getElementById('qp-empty').classList.add('hidden');
   document.getElementById('qp-buyer').classList.remove('hidden');
   document.getElementById('qp-quote-area').classList.remove('hidden');
@@ -939,228 +1215,194 @@ function openQuotePanel(id) {
   document.getElementById('qp-notes').textContent = inq.notes;
 
   renderQuote(inq);
-  showView('quote-panel');
 }
+
+function money(value) { return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 function renderQuote(inq) {
   if (!inq) return;
-
-  // Generate AI quote if not exists
-  if (!inq.quoteBreakdown) {
-    // TODO: AI quote generation API — generate quote based on settings and inquiry
-    inq.quoteBreakdown = generateMockQuote(inq);
-  }
-
   const b = inq.quoteBreakdown;
-  document.getElementById('q-matcost').textContent = '$' + b.material.toLocaleString();
-  document.getElementById('q-labcost').textContent = '$' + b.labor.toLocaleString();
-  document.getElementById('q-logistics').textContent = '$' + b.logistics.toLocaleString();
-  const subtotal = b.material + b.labor + b.logistics;
-  document.getElementById('q-subtotal').textContent = '$' + subtotal.toLocaleString();
-  document.getElementById('q-marginpct').textContent = b.marginPct;
-  document.getElementById('q-margin').textContent = '$' + b.margin.toLocaleString();
-  document.getElementById('q-total').textContent = '$' + b.total.toLocaleString();
-
-  // Unit price from qty
-  const qtyNum = parseFloat(inq.qty.replace(/[^0-9.]/g, '')) || 1000;
-  document.getElementById('q-unitprice').textContent = '$' + (b.total / qtyNum).toFixed(2) + '/sqm';
-
-  const qtyNum2 = parseFloat(inq.qty.replace(/[^0-9.]/g, '')) || 1000;
-  document.getElementById('q-meta').textContent = `Generated: ${new Date().toLocaleString()} | Unit price: $${(b.total / qtyNum2).toFixed(2)}/sqm | Margin: ${b.marginPct}%`;
-
-  // Quote history
-  const hist = inq.quoteHistory || [];
-  const histHTML = hist.length === 0
-    ? '<div class="text-sm text-slate-400 dark:text-slate-500">No prior quotes</div>'
-    : hist.map(h => `<div class="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
-        <div><div class="text-slate-700 dark:text-slate-200">$${h.amount.toLocaleString()}</div><div class="text-xs text-slate-400">${h.date} · ${h.status}</div></div>
-        <span class="intent-badge ${h.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${h.status}</span>
-      </div>`).join('');
-  document.getElementById('q-history-list').innerHTML = histHTML;
-
-  // Show appropriate action buttons based on current status
-  const actionsEl = document.getElementById('q-actions');
-  if (inq.status === 'Quoted') {
-    actionsEl.innerHTML = `<div class="text-sm text-green-600 dark:text-green-400 font-semibold"><i class="fas fa-check-circle mr-1"></i> Quote Approved — $${inq.quoteAmount.toLocaleString()}</div>
-      <button class="btn btn-secondary btn-sm" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>`;
-  } else if (inq.status === 'Rejected') {
-    actionsEl.innerHTML = `<div class="text-sm text-red-600 dark:text-red-400 font-semibold"><i class="fas fa-xmark-circle mr-1"></i> Rejected: ${inq.rejectionReason || 'No reason provided'}</div>
-      <button class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate"></i> Regenerate</button>`;
-  } else {
-    actionsEl.innerHTML = `
-      <button class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
-      <button class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
-      <button class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>`;
-  }
+  document.getElementById('qp-quote-area').classList.toggle('hidden', !b);
+  if (!b) return;
+  const labels = { material: 'Material', craft: 'Craft / Labor', logistics: 'Logistics (FOB China)', compliance: 'Compliance', margin: `Margin (${b.margin.percent}%)` };
+  document.getElementById('q-breakdown').innerHTML = Object.entries(labels).map(([field, label]) => `
+    <div class="flex justify-between items-center text-sm gap-3">
+      <span class="text-slate-700 dark:text-slate-200">${money(b[field].amount)}</span>
+      <span class="text-slate-500 dark:text-slate-400">${escHtml(label)}
+        <button type="button" class="btn btn-secondary btn-sm" title="${escHtml(b[field].reason)}" aria-label="${escHtml(label + ': ' + b[field].reason)}">?</button>
+      </span>
+    </div>`).join('');
+  document.getElementById('q-subtotal').textContent = money(b.subtotal);
+  document.getElementById('q-total').textContent = money(b.total);
+  document.getElementById('q-unitprice').textContent = money(b.unitPrice) + '/sqm';
+  document.getElementById('q-meta').textContent = `Generated: ${new Date(b.generatedAt).toLocaleString()} | Provider: ${b.provider} | Confidence: ${Math.round(b.overallConfidence * 100)}% | Processing: ${b.processingMs}ms`;
+  document.getElementById('q-warnings').textContent = (b.warnings || []).join(' · ');
+  document.getElementById('q-risk-flags').innerHTML = b.riskFlags.length ? b.riskFlags.map(f => `<div>${escHtml(f)}</div>`).join('') : 'No risk flags';
+  document.getElementById('q-citations').innerHTML = b.citations.map(c => `<div>${escHtml(c.field)}: ${escHtml(String(c.value))} · ${escHtml(c.source)}</div>`).join('') || 'No provider citations for manually edited values';
+  document.getElementById('q-history-list').innerHTML = quoteHistoryHTML(inq);
+  const editable = !['Won', 'Lost'].includes(inq.status);
+  document.getElementById('q-actions').innerHTML = `
+    <div class="w-full text-sm">Current status: ${escHtml(inq.status)}</div>
+    ${inq.status === 'Quoting' ? '<button type="button" class="btn btn-success" onclick="approveQuote()">Approve Quote</button>' : ''}
+    ${editable ? '<button type="button" class="btn btn-danger" onclick="showRejectForm()">Reject</button><button type="button" class="btn btn-secondary" onclick="showEditForm()">Edit</button>' : ''}`;
 }
 
-function generateMockQuote(inq) {
-  // TODO: AI quote generation API — this is the mock implementation
-  const qtyNum = parseFloat(inq.qty.replace(/[^0-9.]/g, '')) || 1000;
-  const matCost = qtyNum * settings.matCost;
-  const laborCost = qtyNum * settings.labor;
-  const containerSqm = settings.containerSqm;
-  const numContainers = Math.max(1, Math.ceil(qtyNum / containerSqm));
-  const logistics = numContainers * settings.logisticsBase;
-  const subtotal = matCost + laborCost + logistics;
-  const adj = (settings.adjustments[inq.country] || 0) / 100;
-  const marginPct = Math.max(5, Math.min(50, settings.margin + adj * 100));
-  const margin = Math.round(subtotal * (marginPct / 100));
-  const total = subtotal + margin;
-  return { material: Math.round(matCost), labor: Math.round(laborCost), logistics: Math.round(logistics), marginPct: Math.round(marginPct), margin, total: Math.round(total) };
-}
+// Kept as a synchronous compatibility wrapper for the original mock calculation.
+function generateMockQuote(inq) { return window.aiQuoteEngine.mockProvider(inq, settings); }
 
-function regenerateQuote() {
-  if (!selectedInquiry) return;
-  // TODO: AI quote generation API — re-generate with updated settings
-  selectedInquiry.quoteBreakdown = generateMockQuote(selectedInquiry);
-  selectedInquiry.quoteAmount = null;
-  persist();
-  renderQuote(selectedInquiry);
-  renderDashboard();
+let generatingQuote = false;
+async function regenerateQuote() {
+  if (!selectedInquiry || generatingQuote) return;
+  const inq = selectedInquiry;
+  generatingQuote = true;
+  clearUIError();
+  try {
+    if (['Won', 'Lost'].includes(inq.status)) throw new Error('Cannot regenerate a closed inquiry');
+    // Snapshot mock inputs and settings so navigation/settings changes cannot mix results.
+    const b = await window.quoteInquiry(JSON.parse(JSON.stringify(inq)), { ...settings, adjustments: { ...settings.adjustments } });
+    prepareQuoting(inq, 'Generated a new quote');
+    inq.quoteBreakdown = b;
+    inq.quoteAmount = null;
+    appendActivity(inq, 'quote_generated', inq.status, inq.status, 'AI (' + b.provider + ')', 'Generated ' + money(b.total));
+    addQuoteHistory(inq, 'Generated', 'Provider: ' + b.provider);
+    persist();
+    if (selectedInquiry === inq) openQuotePanel(inq.id);
+    renderDashboard();
+  } catch (error) { showUIError(error); }
+  finally { generatingQuote = false; }
 }
 
 function showEditForm() {
-  if (!selectedInquiry) return;
+  if (!selectedInquiry || !selectedInquiry.quoteBreakdown) return;
   const b = selectedInquiry.quoteBreakdown;
-  document.getElementById('edit-matcost').value = b.material;
-  document.getElementById('edit-labcost').value = b.labor;
-  document.getElementById('edit-logistics').value = b.logistics;
-  document.getElementById('edit-marginpct').value = b.marginPct;
+  ['material', 'craft', 'logistics', 'compliance'].forEach((field, index) => {
+    document.getElementById(['edit-matcost', 'edit-labcost', 'edit-logistics', 'edit-compliance'][index]).value = b[field].amount;
+  });
+  document.getElementById('edit-marginpct').value = b.margin.percent;
   document.getElementById('q-edit-area').classList.remove('hidden');
 }
 
 function applyEdit() {
-  if (!selectedInquiry) return;
-  const material = parseFloat(document.getElementById('edit-matcost').value) || 0;
-  const labor = parseFloat(document.getElementById('edit-labcost').value) || 0;
-  const logistics = parseFloat(document.getElementById('edit-logistics').value) || 0;
-  const marginPct = parseFloat(document.getElementById('edit-marginpct').value) || 20;
-  const subtotal = material + labor + logistics;
-  const margin = Math.round(subtotal * (marginPct / 100));
-  const total = subtotal + margin;
-
-  selectedInquiry.quoteBreakdown = { material, labor, logistics, marginPct, margin, total };
-  selectedInquiry.quoteAmount = null;
-  document.getElementById('q-edit-area').classList.add('hidden');
-  persist();
-  renderQuote(selectedInquiry);
+  if (!selectedInquiry || !selectedInquiry.quoteBreakdown) return;
+  try {
+    if (['Won', 'Lost'].includes(selectedInquiry.status)) throw new Error('Cannot edit a closed inquiry');
+    const values = ['edit-matcost', 'edit-labcost', 'edit-logistics', 'edit-compliance', 'edit-marginpct'].map(id => {
+      const value = document.getElementById(id).value;
+      if (value.trim() === '') throw new Error('Enter all quote values');
+      return Number(value);
+    });
+    if (values.some(v => !Number.isFinite(v) || v < 0) || values[4] < 5 || values[4] > 50) throw new Error('Costs must be non-negative; margin must be 5–50%');
+    const b = JSON.parse(JSON.stringify(selectedInquiry.quoteBreakdown));
+    ['material', 'craft', 'logistics', 'compliance'].forEach((field, index) => {
+      b[field].amount = Math.round(values[index] * 100) / 100;
+      b[field].reason = 'Manually edited by James Zheng; verify this amount before approval.';
+      b[field].confidence = 0.5;
+    });
+    b.margin.percent = values[4];
+    b.margin.reason = 'Manually edited by James Zheng; bounded to 5–50%.';
+    b.material.sourceQuotes = [];
+    b.subtotal = Math.round((b.material.amount + b.craft.amount + b.logistics.amount + b.compliance.amount) * 100) / 100;
+    b.margin.amount = Math.round(b.subtotal * b.margin.percent / 100);
+    b.total = Math.round((b.subtotal + b.margin.amount) * 100) / 100;
+    b.unitPrice = Math.round(b.total / window.aiQuoteEngine.quantity(selectedInquiry) * 100) / 100;
+    b.generatedAt = new Date().toISOString();
+    b.overallConfidence = 0.5;
+    b.riskFlags = b.riskFlags.filter(flag => !['legacy-total-mismatch', 'high-quantity-low-margin'].includes(flag));
+    if (window.aiQuoteEngine.quantity(selectedInquiry) >= 5000 && b.margin.percent < 10) b.riskFlags.push('high-quantity-low-margin');
+    b.citations = []; // Provider citations no longer support manually entered amounts.
+    b.riskFlags = [...new Set([...b.riskFlags, 'manual-edit-needs-review'])];
+    prepareQuoting(selectedInquiry, 'Manual quote revision');
+    selectedInquiry.quoteBreakdown = b;
+    selectedInquiry.quoteAmount = null;
+    appendActivity(selectedInquiry, 'quote_edited', selectedInquiry.status, selectedInquiry.status, 'James Zheng', 'Edited ' + money(b.total));
+    addQuoteHistory(selectedInquiry, 'Edited', 'Manual quote revision');
+    cancelEdit();
+    clearUIError();
+    refreshInquiryViews();
+  } catch (error) { showUIError(error); }
 }
 
-function cancelEdit() {
-  document.getElementById('q-edit-area').classList.add('hidden');
-}
+function cancelEdit() { document.getElementById('q-edit-area').classList.add('hidden'); }
 
 function approveQuote() {
-  if (!selectedInquiry) return;
-  const now = new Date().toISOString().slice(0, 10);
-  const amount = selectedInquiry.quoteBreakdown.total;
-  selectedInquiry.status = 'Quoted';
-  selectedInquiry.quoteAmount = amount;
-  selectedInquiry.quoteHistory = selectedInquiry.quoteHistory || [];
-  selectedInquiry.quoteHistory.push({ date: now, amount, status: 'Approved' });
-
-  // TODO: Connect to database — save quote record
-  quoteRecords.push({
-    id: 'QR-' + String(quoteRecords.length + 1).padStart(4, '0'),
-    inquiryId: selectedInquiry.id,
-    company: selectedInquiry.company,
-    product: selectedInquiry.product,
-    amount,
-    status: 'Approved',
-    processedAt: new Date().toISOString(),
-    processingTime: Math.floor(Math.random() * 20) + 5 + 'm',
-    inspector: 'James Zheng'
-  });
-
-  persist();
-  renderQuote(selectedInquiry);
-  renderDashboard();
-  renderReport();
+  if (!selectedInquiry || !selectedInquiry.quoteBreakdown) return;
+  try {
+    transitionInquiry(selectedInquiry.id, 'Quoting', 'Quoted', 'James Zheng', 'Quote approved');
+    selectedInquiry.quoteAmount = selectedInquiry.quoteBreakdown.total;
+    appendActivity(selectedInquiry, 'quote_approved', 'Quoting', 'Quoted', 'James Zheng', 'Approved ' + money(selectedInquiry.quoteAmount));
+    addQuoteHistory(selectedInquiry, 'Approved', 'Quote approved');
+    addQuoteRecord(selectedInquiry, 'Approved', 'Quote approved');
+    cancelEdit(); cancelReject();
+    refreshInquiryViews();
+  } catch (error) { showUIError(error); }
 }
 
-function showRejectForm() {
-  document.getElementById('q-reject-form').classList.remove('hidden');
-}
-
+function showRejectForm() { document.getElementById('q-reject-form').classList.remove('hidden'); }
 function cancelReject() {
   document.getElementById('q-reject-form').classList.add('hidden');
   document.getElementById('reject-reason').value = '';
 }
 
+function rejectInquiry(inq, reason) {
+  if (!reason.trim()) throw new Error('Enter a rejection reason');
+  const fromState = inq.status;
+  transitionInquiry(inq.id, fromState, 'Lost', 'James Zheng', reason.trim());
+  inq.rejectionReason = reason.trim();
+  inq.quoteAmount = null;
+  appendActivity(inq, 'quote_rejected', fromState, 'Lost', 'James Zheng', reason.trim());
+  addQuoteHistory(inq, 'Rejected', reason.trim());
+  addQuoteRecord(inq, 'Rejected', reason.trim());
+  refreshInquiryViews();
+}
 function confirmReject() {
   if (!selectedInquiry) return;
-  const now = new Date().toISOString().slice(0, 10);
-  const amount = selectedInquiry.quoteBreakdown.total;
-  selectedInquiry.status = 'Rejected';
-  selectedInquiry.quoteAmount = null;
-  selectedInquiry.rejectionReason = document.getElementById('reject-reason').value || 'No reason provided';
-  selectedInquiry.quoteHistory = selectedInquiry.quoteHistory || [];
-  selectedInquiry.quoteHistory.push({ date: now, amount, status: 'Rejected' });
-
-  // TODO: Connect to database — save quote record
-  quoteRecords.push({
-    id: 'QR-' + String(quoteRecords.length + 1).padStart(4, '0'),
-    inquiryId: selectedInquiry.id,
-    company: selectedInquiry.company,
-    product: selectedInquiry.product,
-    amount,
-    status: 'Rejected',
-    processedAt: new Date().toISOString(),
-    processingTime: Math.floor(Math.random() * 20) + 5 + 'm',
-    inspector: 'James Zheng',
-    reason: selectedInquiry.rejectionReason
-  });
-
-  persist();
-  cancelReject();
-  renderQuote(selectedInquiry);
-  renderDashboard();
-  renderReport();
+  try { rejectInquiry(selectedInquiry, document.getElementById('reject-reason').value); cancelReject(); }
+  catch (error) { showUIError(error); }
 }
-
+function addQuoteHistory(inq, status, reason) {
+  inq.quoteHistory.push({ date: new Date().toISOString(), amount: inq.quoteBreakdown ? inq.quoteBreakdown.total : 0, status, reason });
+}
+function addQuoteRecord(inq, status, reason) {
+  if (!inq.quoteBreakdown) return; // A pre-quote rejection is an activity, not a quote decision.
+  quoteRecords.push({
+    id: 'QR-' + String(quoteRecords.length + 1).padStart(4, '0'), inquiryId: inq.id,
+    company: inq.company, product: inq.product, amount: inq.quoteBreakdown.total,
+    status, processedAt: new Date().toISOString(), processingTime: Math.ceil(inq.quoteBreakdown.processingMs / 60000) + 'm',
+    inspector: 'James Zheng', reason, notes: inq.notes,
+    quote: JSON.parse(JSON.stringify(inq.quoteBreakdown))
+  });
+}
+function refreshInquiryViews() {
+  persist(); renderQuote(selectedInquiry); renderInquiryDetail(); renderDashboard(); renderInquiries(); renderReport();
+}
 function printQuote() {
-  if (!selectedInquiry) return;
+  if (!selectedInquiry || !selectedInquiry.quoteBreakdown) return;
   const b = selectedInquiry.quoteBreakdown;
-  const qtyNum = parseFloat(selectedInquiry.qty.replace(/[^0-9.]/g, '')) || 1000;
-  const content = `
-QUOTATION SHEET — WITOP DECOR
-=============================
+  const content = `QUOTATION SHEET — WITOP DECOR
 Company: ${selectedInquiry.company}
 Country: ${selectedInquiry.country}
 Contact: ${selectedInquiry.contact}
 Email: ${selectedInquiry.email}
-Date: ${new Date().toLocaleDateString()}
+Date: ${new Date(b.generatedAt).toLocaleString()}
 
 PRODUCT SPECIFICATIONS
-----------------------
-Product: ${selectedInquiry.product}
-Quantity: ${selectedInquiry.qty}
-Thickness: ${selectedInquiry.thickness}
-Width: ${selectedInquiry.width}
-Length: ${selectedInquiry.length}
-Surface: ${selectedInquiry.surface}
-Color: ${selectedInquiry.color}
+${['product', 'qty', 'thickness', 'width', 'length', 'surface', 'color'].map(f => f + ': ' + selectedInquiry[f]).join('\n')}
 
 PRICE BREAKDOWN (FOB China)
-----------------------------
-Material Cost:  $${b.material.toLocaleString()}
-Labor Cost:     $${b.labor.toLocaleString()}
-Logistics:      $${b.logistics.toLocaleString()}
-Subtotal:       $${(b.material+b.labor+b.logistics).toLocaleString()}
-Margin (${b.marginPct}%):  $${b.margin.toLocaleString()}
-TOTAL (FOB):    $${b.total.toLocaleString()}
-
-Unit Price: $${(b.total/qtyNum).toFixed(2)}/sqm
-
-Notes: ${selectedInquiry.notes}
-
-Generated by Witop Decor AI Quote System
-  `.trim();
+${['material', 'craft', 'logistics', 'compliance', 'margin'].map(f => f + ': ' + money(b[f].amount) + ' — ' + b[f].reason).join('\n')}
+Subtotal: ${money(b.subtotal)}
+Margin: ${b.margin.percent}%
+TOTAL (FOB): ${money(b.total)}
+Unit price: ${money(b.unitPrice)}/sqm
+Risk flags: ${b.riskFlags.join(', ') || 'None'}
+Notes: ${selectedInquiry.notes}`;
   const win = window.open('', '_blank');
-  win.document.write('<pre style="font-family:monospace;font-size:13px;padding:20px;white-space:pre-wrap">' + content + '</pre>');
-  win.document.close();
-  win.print();
+  if (!win) { showUIError(new Error('Allow popups to print the quote')); return; }
+  const pre = win.document.createElement('pre');
+  pre.className = 'quotation';
+  pre.textContent = content;
+  win.document.body.appendChild(pre);
+  win.document.close(); win.print();
 }
 
 // ============================================================
@@ -1172,24 +1414,33 @@ function renderSettings() {
 }
 
 function saveSettings() {
-  settings.margin = parseFloat(document.getElementById('s-margin').value) || 20;
-  settings.matRule = document.getElementById('s-mat-rule').value;
-  settings.matCost = parseFloat(document.getElementById('s-mat-cost').value) || 12.50;
-  settings.labor = parseFloat(document.getElementById('s-labor').value) || 3.00;
-  settings.logisticsBase = parseFloat(document.getElementById('s-logistics-base').value) || 3500;
-  settings.containerSqm = parseFloat(document.getElementById('s-container-sqm').value) || 700;
-  settings.aiModel = document.getElementById('s-ai-model').value;
-  settings.confidence = parseFloat(document.getElementById('s-confidence').value) || 0.7;
-  settings.autoQuote = document.getElementById('s-auto-quote').value;
-  settings.adjustments = {};
-  COUNTRIES.forEach(c => {
-    const el = document.getElementById('adj-' + c);
-    if (el) settings.adjustments[c] = parseFloat(el.value) || 0;
-  });
-  persist();
-  const msg = document.getElementById('s-saved-msg');
-  msg.classList.remove('hidden');
-  setTimeout(() => msg.classList.add('hidden'), 2000);
+  try {
+    const next = { ...settings, adjustments: { ...settings.adjustments } };
+    const numeric = { margin: 's-margin', matCost: 's-mat-cost', labor: 's-labor', logisticsBase: 's-logistics-base', containerSqm: 's-container-sqm', confidence: 's-confidence' };
+    Object.entries(numeric).forEach(([key, id]) => {
+      const value = document.getElementById(id).value;
+      if (!value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0) throw new Error('Invalid pricing setting: ' + key);
+      next[key] = Number(value);
+    });
+    if (next.containerSqm <= 0 || next.margin > 100 || next.confidence > 1) throw new Error('Check container size, margin and confidence limits');
+    next.matRule = document.getElementById('s-mat-rule').value;
+    next.aiModel = document.getElementById('s-ai-model').value;
+    next.aiProvider = document.getElementById('s-ai-provider').value;
+    next.aiApiKey = document.getElementById('s-ai-api-key').value.trim();
+    next.autoQuote = document.getElementById('s-auto-quote').value;
+    COUNTRIES.forEach(c => {
+      const el = document.getElementById('adj-' + c);
+      if (el) {
+        if (!el.value.trim() || !Number.isFinite(Number(el.value))) throw new Error('Invalid region adjustment: ' + c);
+        next.adjustments[c] = Number(el.value);
+      }
+    });
+    settings = next;
+    persist(); clearUIError();
+    const msg = document.getElementById('s-saved-msg');
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 2000);
+  } catch (error) { showUIError(error); }
 }
 
 function resetSettings() {
@@ -1202,32 +1453,71 @@ function resetSettings() {
 // QUALITY REPORT
 // ============================================================
 
+function scoreQuoteRecord(record) {
+  const b = record.quote;
+  const rawTime = parseInt(record.processingTime, 10);
+  const response_time_score = Number.isFinite(rawTime) ? Math.max(0, Math.min(25, 25 - rawTime)) : 0;
+  const required = ['material', 'craft', 'logistics', 'compliance', 'margin'];
+  const missing = required.filter(field => !b || !b[field] || !Number.isFinite(b[field].amount) || b[field].amount <= 0);
+  const completeness_score = missing.length === 0 ? 25 : 0;
+  const price_reasonableness_score = b && b.margin && b.margin.percent >= 10 && b.margin.percent <= 35 ? 25 : 0;
+  const text = [record.notes || '', record.reason || '', ...required.map(field => b && b[field] ? b[field].reason : '')].join(' ');
+  const riskWords = ['ASAP', 'urgent', 'cheap', 'lowest', '敏感'].filter(word => text.toLowerCase().includes(word.toLowerCase()));
+  const risk_word_score = Math.max(0, 25 - riskWords.length * 5);
+  const total = response_time_score + completeness_score + price_reasonableness_score + risk_word_score;
+  const deductions = [];
+  if (response_time_score < 25) deductions.push(`Response time: −${25 - response_time_score}${Number.isFinite(rawTime) ? ' (' + rawTime + 'm)' : ' (missing processing time)'}`);
+  if (missing.length) deductions.push('Completeness: −25; zero/missing ' + missing.join(', '));
+  if (!price_reasonableness_score) deductions.push('Price reasonableness: −25; margin outside 10–35% or snapshot missing');
+  if (riskWords.length) deductions.push('Risk words: −' + (25 - risk_word_score) + '; ' + riskWords.join(', '));
+  return { response_time_score, completeness_score, price_reasonableness_score, risk_word_score, total,
+    grade: total >= 90 ? 'A' : total >= 75 ? 'B' : total >= 60 ? 'C' : 'D', deductions };
+}
+function qualityExportData() { return quoteRecords.map(record => ({ ...record, quality: scoreQuoteRecord(record) })); }
+function exportQualityJSON() {
+  const blob = new Blob([JSON.stringify(qualityExportData(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = 'witop-quote-quality-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function renderReport() {
   const approved = quoteRecords.filter(r => r.status === 'Approved');
   const rejected = quoteRecords.filter(r => r.status === 'Rejected');
   const total = quoteRecords.length;
   const avgTime = total > 0
-    ? Math.round(approved.concat(rejected).reduce((sum, r) => sum + parseInt(r.processingTime), 0) / total)
+    ? Math.round(quoteRecords.reduce((sum, r) => sum + (parseInt(r.processingTime, 10) || 0), 0) / total)
     : 0;
 
   document.getElementById('r-total').textContent = total;
   document.getElementById('r-approved').textContent = approved.length;
   document.getElementById('r-rejected').textContent = rejected.length;
   document.getElementById('r-avgtime').textContent = avgTime + 'm';
+  document.getElementById('r-avgquality').textContent = total ? (quoteRecords.reduce((sum, r) => sum + scoreQuoteRecord(r).total, 0) / total).toFixed(1) + '/100' : '0/100';
 
   // Table
   const sorted = [...quoteRecords].sort((a, b) => b.processedAt.localeCompare(a.processedAt));
-  document.getElementById('report-table-body').innerHTML = sorted.map(r => `
+  document.getElementById('report-table-body').innerHTML = sorted.map(r => {
+    const score = scoreQuoteRecord(r);
+    return `
     <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
       <td class="font-mono text-xs text-slate-500">${r.inquiryId}</td>
       <td class="font-medium text-slate-900 dark:text-white">${escHtml(r.company)}</td>
-      <td class="text-slate-600 dark:text-slate-300">${r.product}</td>
+      <td class="text-slate-600 dark:text-slate-300">${escHtml(r.product)}</td>
       <td class="font-semibold text-slate-900 dark:text-white">$${r.amount.toLocaleString()}</td>
       <td><span class="inline-flex items-center gap-1.5"><span class="status-dot" style="background:${r.status === 'Approved' ? '#16a34a' : '#dc2626'}"></span>${r.status}</span></td>
-      <td class="text-slate-600 dark:text-slate-300">${r.processingTime}</td>
-      <td class="text-slate-600 dark:text-slate-300">${r.inspector}</td>
+      <td class="text-slate-600 dark:text-slate-300">${escHtml(r.processingTime)}</td>
+      <td class="text-slate-600 dark:text-slate-300">${escHtml(r.inspector)}</td>
       <td class="text-xs text-slate-500">${r.processedAt ? r.processedAt.slice(0, 10) : '—'}</td>
-    </tr>`).join('') || '<tr><td colspan="8" class="text-center py-6 text-slate-400 text-sm">No quote records yet</td></tr>';
+      <td><details><summary class="cursor-pointer font-semibold">${score.total}/100 · ${score.grade}</summary>
+        <div class="py-2 text-xs text-slate-600 dark:text-slate-300 space-y-1">
+          <div>Response time: ${score.response_time_score}/25</div><div>Completeness: ${score.completeness_score}/25</div>
+          <div>Price reasonableness: ${score.price_reasonableness_score}/25</div><div>Risk words: ${score.risk_word_score}/25</div>
+          ${score.deductions.map(d => `<div>${escHtml(d)}</div>`).join('') || '<div>No deductions</div>'}
+        </div></details></td>
+    </tr>`; }).join('') || '<tr><td colspan="9" class="text-center py-6 text-slate-400 text-sm">No quote records yet</td></tr>';
 
   // Rejection analysis
   const rejectionGroups = {};
@@ -1255,7 +1545,7 @@ function renderReport() {
 // ============================================================
 
 function escHtml(str) {
-  if (!str) return '';
+  if (str == null) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 

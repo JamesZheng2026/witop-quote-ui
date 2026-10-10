@@ -1,0 +1,64 @@
+=== A2 Validation ===
+Target: /Users/james/witop-quote-ui/index.html
+Date: 2026-10-10T09:04:23.523Z
+Baseline: f6b793b (A1 script inspected read-only; no A1 code imported)
+PASS HTML/body structure pairs
+PASS All IDs unique (including new IDs)
+PASS All 28 new IDs contain no whitespace
+PASS All 27 new/changed buttons have type="button"
+PASS A1 Saudi Arabia ID preserved exactly
+WARN A1 legacy id="adj-Saudi Arabia" remains intentionally; see fix/html-issues-round1.
+WARN 4 unchanged baseline buttons lack type; A1 owns these.
+PASS Existing escHtml and intentBadge preserved
+WARN A1 legacy intentBadge uses innerHTML/string rendering; its separate hardening is not imported.
+PASS No new CDN dependencies
+PASS README untouched on this branch
+PASS No networking introduced in application script
+PASS Inquiry detail / quote / settings / quality DOM nodes exist
+PASS All inline scripts parse
+PASS window.aiQuoteEngine / quoteInquiry exported
+PASS window.quoteInquiry exported
+PASS Provider table has mock/rules/llm and four named adapters
+PASS STATUSES explicit seven states and transitionInquiry exported
+PASS All original MOCK_INQUIRIES fields/values preserved
+PASS Legacy Rejected migrated; historical totals preserved and flagged
+PASS 6 view DOM rendering/navigation smoke checks
+PASS List rows route to detail without generating a quote
+PASS Status history popover stops row navigation
+PASS Illegal transition throws, alerts and preserves status
+PASS Mock retains original qty/material/labor/logistics/margin totals
+PASS QuoteResult schema and arithmetic
+PASS Rules quotes SGS + LC compliance and region margin with reasons
+PASS Rules bulk tier / CE / margin clamp / risk flag
+PASS Missing LLM key rejects with exact error
+PASS llm returns mock + warning, without network
+PASS openai returns mock + warning, without network
+PASS anthropic returns mock + warning, without network
+PASS openrouter returns mock + warning, without network
+PASS minimax returns mock + warning, without network
+PASS Key settings memory-only persistence
+PASS Reload keeps provider but clears key
+PASS Missing key UI feedback leaves inquiry and history unchanged
+PASS Generate routes detail → quote, New → Reviewed → Quoting
+PASS Edit recalculates five parts and records history/activity
+PASS Invalid edit preserves prior quote and shows error
+PASS Approve transitions Quoting → Quoted and creates immutable record
+PASS Regeneration re-enters Quoting and preserves decision snapshot
+PASS Quoted → Negotiating → Won path is reachable
+PASS Closed Won inquiry cannot regenerate
+PASS Quote rejection reaches Lost with reason, activity and record
+PASS Reject requires non-empty reason
+PASS Pre-quote rejection logs Lost without fabricating quote record
+PASS Activities conform to ts/type/fromState/toState/actor/note
+PASS Four-dimensional scoring / risk deductions / grades / clamps
+PASS Quality expansion, averages and JSON download carry scores
+PASS Rendered new buttons and inline event handlers are valid
+PASS Activities, quote records and legacy migration survive reload once
+PASS git diff --check
+WARN Headless Chrome launch: status=0, signal=none; no browser visual QA claimed.
+DOM harness views checked: 6/6 (not browser visual rendering).
+=== Summary ===
+PASS: 50
+FAIL: 0
+WARN: 4
+Report: /Users/james/witop-quote-ui/reports/a2-validation.txt
