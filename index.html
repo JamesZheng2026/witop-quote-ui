@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Witop Decor — AI Quote Processing</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#312e81' },
+            sidebar: '#0f172a',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .sidebar-item { transition: all 0.15s; }
+    .sidebar-item:hover, .sidebar-item.active { background: rgba(255,255,255,0.08); }
+    .sidebar-item.active { border-left: 3px solid #6366f1; }
+    .intent-badge { padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .intent-cold { background: #1e293b; color: #94a3b8; }
+    .intent-warm { background: #451a03; color: #fb923c; }
+    .intent-hot { background: #7c2d12; color: #fb7185; }
+    .intent-high { background: #6b21a8; color: #e879f9; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .tab-btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: #64748b; border: 1px solid transparent; }
+    .tab-btn:hover { color: #334155; }
+    .tab-btn.active { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+    .dark .tab-btn.active { background: #1e3a5f; color: #93c5fd; border-color: #1e3a5f; }
+    .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; }
+    .dark .card { background: #1e293b; border-color: #334155; }
+    table.data-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    .dark table.data-table th { border-color: #334155; color: #94a3b8; }
+    table.data-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+    .dark table.data-table td { border-color: #1e293b; }
+    table.data-table tbody tr { cursor: pointer; transition: background 0.1s; }
+    table.data-table tbody tr:hover { background: #f8fafc; }
+    .dark table.data-table tbody tr:hover { background: #334155; }
+    table.data-table tbody tr.selected { background: #eef2ff; }
+    .dark table.data-table tbody tr.selected { background: #312e81; }
+    .input-field { width: 100%; padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: white; color: #0f172a; }
+    .dark .input-field { background: #1e293b; border-color: #475569; color: #f1f5f9; }
+    .input-field:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+    select.input-field { cursor: pointer; }
+    .btn { padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; border: none; }
+    .btn-primary { background: #4f46e5; color: white; }
+    .btn-primary:hover { background: #4338ca; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover { background: #15803d; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+    .dark .btn-secondary { background: #334155; color: #cbd5e1; border-color: #475569; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .dark .btn-secondary:hover { background: #475569; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .panel-section { margin-bottom: 20px; }
+    .panel-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 10px; }
+    .chart-bar { border-radius: 4px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: white; min-width: 40px; transition: width 0.4s ease; }
+    .stat-card { padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; }
+    .dark .stat-card { background: #1e293b; border-color: #334155; }
+    .no-select { user-select: none; }
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+    }
+    .print-only { display: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="w-56 bg-sidebar text-white flex flex-col flex-shrink-0 no-print" style="min-height:100vh">
+    <div class="p-5 border-b border-slate-700">
+      <div class="text-sm font-bold tracking-wide">WITOP DECOR</div>
+      <div class="text-xs text-slate-400 mt-0.5">AI Quote Processing</div>
+    </div>
+    <nav class="flex-1 py-4">
+      <div class="sidebar-item active px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('dashboard')" id="nav-dashboard">
+        <i class="fas fa-chart-pie w-4 text-slate-400"></i> Dashboard
+      </div>
+      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiries')" id="nav-inquiries">
+        <i class="fas fa-inbox w-4 text-slate-400"></i> Inquiries
+      </div>
+      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quote-panel')" id="nav-quote-panel">
+        <i class="fas fa-calculator w-4 text-slate-400"></i> Quote Panel
+      </div>
+      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('settings')" id="nav-settings">
+        <i class="fas fa-cog w-4 text-slate-400"></i> AI Settings
+      </div>
+      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('report')" id="nav-report">
+        <i class="fas fa-clipboard-check w-4 text-slate-400"></i> Quality Report
+      </div>
+    </nav>
+    <div class="p-4 border-t border-slate-700">
+      <div class="text-xs text-slate-500">PoC Demo v1.0</div>
+      <div class="text-xs text-slate-500">Witop Decor Co., Ltd.</div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="flex-1 overflow-auto min-w-0">
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="view p-6">
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Inquiry overview &amp; lifecycle funnel</p>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Inquiries</div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-total">0</div>
+          <div class="text-xs text-slate-400 mt-1">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Handled</div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-handled">0</div>
+          <div class="text-xs text-slate-400 mt-1">Responded</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">High Intent</div>
+          <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="stat-highintent">0</div>
+          <div class="text-xs text-slate-400 mt-1">Ready to quote</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Unhandled</div>
+          <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="stat-unhandled">0</div>
+          <div class="text-xs text-slate-400 mt-1">Awaiting review</div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card p-4 mb-6">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Status</label>
+            <select class="input-field" id="dash-filter-status" onchange="renderDashboard()">
+              <option value="">All</option>
+              <option value="New">New</option>
+              <option value="Reviewed">Reviewed</option>
+              <option value="Quoted">Quoted</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Intent</label>
+            <select class="input-field" id="dash-filter-intent" onchange="renderDashboard()">
+              <option value="">All</option>
+              <option value="Cold">Cold</option>
+              <option value="Warm">Warm</option>
+              <option value="Hot">Hot</option>
+              <option value="High Intent">High Intent</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Country</label>
+            <select class="input-field" id="dash-filter-country" onchange="renderDashboard()">
+              <option value="">All</option>
+              <option value="UAE">UAE</option>
+              <option value="Saudi Arabia">Saudi Arabia</option>
+              <option value="USA">USA</option>
+              <option value="UK">UK</option>
+              <option value="Nigeria">Nigeria</option>
+              <option value="Egypt">Egypt</option>
+              <option value="Philippines">Philippines</option>
+              <option value="Vietnam">Vietnam</option>
+              <option value="Germany">Germany</option>
+              <option value="Australia">Australia</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Product</label>
+            <select class="input-field" id="dash-filter-product" onchange="renderDashboard()">
+              <option value="">All</option>
+              <option value="WPC Wall Panel">WPC Wall Panel</option>
+              <option value="SPC Flooring">SPC Flooring</option>
+              <option value="UV Panel">UV Panel</option>
+              <option value="WPC Ceiling">WPC Ceiling</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">From</label>
+            <input type="date" class="input-field" id="dash-filter-from" onchange="renderDashboard()">
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">To</label>
+            <input type="date" class="input-field" id="dash-filter-to" onchange="renderDashboard()">
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="clearDashboardFilters()">Clear</button>
+        </div>
+      </div>
+
+      <!-- Funnel -->
+      <div class="card p-5 mb-6">
+        <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200 mb-4">Inquiry Lifecycle Funnel</h2>
+        <div class="space-y-2.5" id="funnel-container"></div>
+      </div>
+
+      <!-- Recent Activity Table -->
+      <div class="card overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center">
+          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">Recent Inquiries</h2>
+          <button class="btn btn-secondary btn-sm" onclick="showView('inquiries')">View All</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="data-table w-full">
+            <thead>
+              <tr>
+                <th>ID</th><th>Company</th><th>Country</th><th>Product</th><th>Intent</th><th>Status</th><th>Date</th><th>Quote</th>
+              </tr>
+            </thead>
+            <tbody id="recent-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- INQUIRIES VIEW -->
+    <div id="view-inquiries" class="view p-6 hidden">
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Inquiry List</h1>
+        <p class="text-sm text-slate-500 mt-0.5">All inquiries — click a row to open the Quote Panel</p>
+      </div>
+
+      <div class="flex flex-wrap gap-3 items-end mb-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Search</label>
+          <input type="text" class="input-field" placeholder="Company, country, product..." id="inq-search" oninput="renderInquiries()">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Status</label>
+          <select class="input-field" id="inq-status" onchange="renderInquiries()">
+            <option value="">All</option>
+            <option value="New">New</option>
+            <option value="Reviewed">Reviewed</option>
+            <option value="Quoted">Quoted</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Intent</label>
+          <select class="input-field" id="inq-intent" onchange="renderInquiries()">
+            <option value="">All</option>
+            <option value="Cold">Cold</option>
+            <option value="Warm">Warm</option>
+            <option value="Hot">Hot</option>
+            <option value="High Intent">High Intent</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Product</label>
+          <select class="input-field" id="inq-product" onchange="renderInquiries()">
+            <option value="">All</option>
+            <option value="WPC Wall Panel">WPC Wall Panel</option>
+            <option value="SPC Flooring">SPC Flooring</option>
+            <option value="UV Panel">UV Panel</option>
+            <option value="WPC Ceiling">WPC Ceiling</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Sort By</label>
+          <select class="input-field" id="inq-sort" onchange="renderInquiries()">
+            <option value="date-desc">Date ↓</option>
+            <option value="date-asc">Date ↑</option>
+            <option value="amount-desc">Amount ↓</option>
+            <option value="amount-asc">Amount ↑</option>
+            <option value="company-asc">Company A-Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="data-table w-full">
+            <thead>
+              <tr>
+                <th class="cursor-pointer" onclick="sortInquiries('id')">ID <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('company')">Company <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('country')">Country <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('product')">Product <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('intent')">Intent <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('status')">Status <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('date')">Date <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('amount')">AI Quote <i class="fas fa-sort text-xs text-slate-300"></i></th>
+              </tr>
+            </thead>
+            <tbody id="inq-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="text-sm text-slate-500 mt-2" id="inq-count"></div>
+    </div>
+
+    <!-- QUOTE PANEL VIEW -->
+    <div id="view-quote-panel" class="view p-6 hidden">
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI Quote Processing</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Select an inquiry from the list or click a row above</p>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <!-- LEFT: Buyer Info & Specs -->
+        <div class="space-y-4">
+          <!-- Empty state -->
+          <div id="qp-empty" class="card p-10 text-center">
+            <i class="fas fa-inbox text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
+            <div class="text-slate-500 dark:text-slate-400 text-sm">Select an inquiry to begin quoting</div>
+            <button class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+          </div>
+
+          <!-- Buyer Info (shown when inquiry selected) -->
+          <div id="qp-buyer" class="hidden">
+            <div class="card p-5">
+              <div class="panel-section-title">Buyer Information</div>
+              <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Company</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-company">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Country</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-country">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Contact</span><div class="text-slate-700 dark:text-slate-200" id="qp-contact">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Email</span><div class="text-slate-700 dark:text-slate-200" id="qp-email">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Import History</span><div class="text-slate-700 dark:text-slate-200" id="qp-history">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Intent Level</span><div class="mt-0.5" id="qp-intent-badge"></div></div>
+              </div>
+            </div>
+
+            <div class="card p-5">
+              <div class="panel-section-title">Product Details &amp; Suggested Specs</div>
+              <div class="space-y-2.5 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Product</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-product">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Quantity</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-qty">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Thickness</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-thickness">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Width</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-width">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Length</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-length">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Surface</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-surface">—</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Color/Finish</span>
+                  <span class="font-medium text-slate-900 dark:text-white" id="qp-color">—</span>
+                </div>
+              </div>
+
+              <!-- Notes from buyer -->
+              <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1.5">Buyer Notes</div>
+                <div class="text-sm text-slate-600 dark:text-slate-300 italic" id="qp-notes">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Quote -->
+        <div class="space-y-4">
+          <div id="qp-quote-area" class="hidden">
+            <!-- AI Quote Breakdown -->
+            <div class="card p-5">
+              <div class="flex justify-between items-center mb-4">
+                <div class="panel-section-title mb-0">AI-Generated Quote</div>
+                <div class="flex gap-2">
+                  <button class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> Regenerate</button>
+                  <button class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> Print</button>
+                </div>
+              </div>
+
+              <div class="space-y-2 mb-4">
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500 dark:text-slate-400">Material Cost</span>
+                  <span class="text-slate-700 dark:text-slate-200" id="q-matcost">$0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500 dark:text-slate-400">Labor Cost</span>
+                  <span class="text-slate-700 dark:text-slate-200" id="q-labcost">$0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500 dark:text-slate-400">Logistics (FOB China)</span>
+                  <span class="text-slate-700 dark:text-slate-200" id="q-logistics">$0</span>
+                </div>
+                <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2">
+                  <span class="text-slate-500 dark:text-slate-400">Subtotal</span>
+                  <span class="text-slate-700 dark:text-slate-200" id="q-subtotal">$0</span>
+                </div>
+                <div class="flex justify-between text-sm">
+                  <span class="text-slate-500 dark:text-slate-400">Margin (<span id="q-marginpct">20</span>%)</span>
+                  <span class="text-slate-700 dark:text-slate-200" id="q-margin">$0</span>
+                </div>
+                <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2 font-bold">
+                  <span class="text-slate-800 dark:text-slate-100">Total (FOB)</span>
+                  <span class="text-indigo-600 dark:text-indigo-400 text-lg" id="q-total">$0</span>
+                </div>
+                <div class="flex justify-between text-sm mt-1">
+                  <span class="text-slate-500 dark:text-slate-400">Target (USD/sqm)</span>
+                  <span class="text-slate-700 dark:text-slate-200" id="q-unitprice">$0</span>
+                </div>
+              </div>
+
+              <!-- Edit Mode -->
+              <div id="q-edit-area" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 mb-4">
+                <div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-3 uppercase tracking-wide">Edit Quote Values</div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Material Cost ($)</label>
+                    <input type="number" class="input-field" id="edit-matcost" value="0">
+                  </div>
+                  <div>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Labor Cost ($)</label>
+                    <input type="number" class="input-field" id="edit-labcost" value="0">
+                  </div>
+                  <div>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Logistics ($)</label>
+                    <input type="number" class="input-field" id="edit-logistics" value="0">
+                  </div>
+                  <div>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Margin %</label>
+                    <input type="number" class="input-field" id="edit-marginpct" value="20">
+                  </div>
+                </div>
+                <div class="mt-3 flex gap-2">
+                  <button class="btn btn-primary btn-sm" onclick="applyEdit()">Apply</button>
+                  <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex gap-2 flex-wrap" id="q-actions">
+                <button class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
+                <button class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
+                <button class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>
+              </div>
+
+              <!-- Reject Form -->
+              <div id="q-reject-form" class="hidden mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                <div class="text-xs font-bold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">Rejection Reason</div>
+                <textarea class="input-field mb-3" rows="3" placeholder="Enter reason for rejection..." id="reject-reason"></textarea>
+                <div class="flex gap-2">
+                  <button class="btn btn-danger btn-sm" onclick="confirmReject()">Confirm Rejection</button>
+                  <button class="btn btn-secondary btn-sm" onclick="cancelReject()">Cancel</button>
+                </div>
+              </div>
+
+              <div class="mt-3 text-xs text-slate-400 dark:text-slate-500" id="q-meta"></div>
+            </div>
+
+            <!-- Quote History -->
+            <div class="card p-5" id="q-history-card">
+              <div class="panel-section-title">Quote History</div>
+              <div id="q-history-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI SETTINGS VIEW -->
+    <div id="view-settings" class="view p-6 hidden">
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI Quote Settings</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Configure parameters that drive AI quote generation</p>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="card p-5">
+          <div class="panel-section-title">Pricing Rules</div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Default Margin %</label>
+              <input type="number" class="input-field" id="s-margin" value="20" min="0" max="100">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Material Pricing Rule</label>
+              <select class="input-field" id="s-mat-rule">
+                <option value="fixed">Fixed per sqm</option>
+                <option value="tiered">Tiered by quantity</option>
+                <option value="formula">Custom formula</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Material Cost Base (USD/sqm)</label>
+              <input type="number" class="input-field" id="s-mat-cost" value="12.50" step="0.01" min="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="panel-section-title">Labor &amp; Logistics</div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Labor Rate (USD/sqm)</label>
+              <input type="number" class="input-field" id="s-labor" value="3.00" step="0.01" min="0">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Logistics Base (USD/container)</label>
+              <input type="number" class="input-field" id="s-logistics-base" value="3500" step="100" min="0">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Container Size (sqm)</label>
+              <input type="number" class="input-field" id="s-container-sqm" value="700" step="10" min="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="panel-section-title">Region Adjustments</div>
+          <div class="space-y-2.5">
+            <div class="flex gap-2 items-center text-sm">
+              <span class="w-24 text-slate-600 dark:text-slate-300">UAE</span>
+              <input type="number" class="input-field flex-1" id="adj-UAE" value="0" step="0.5">
+              <span class="text-xs text-slate-400 w-8">%</span>
+            </div>
+            <div class="flex gap-2 items-center text-sm">
+              <span class="w-24 text-slate-600 dark:text-slate-300">Saudi Arabia</span>
+              <input type="number" class="input-field flex-1" id="adj-Saudi Arabia" value="0" step="0.5">
+              <span class="text-xs text-slate-400 w-8">%</span>
+            </div>
+            <div class="flex gap-2 items-center text-sm">
+              <span class="w-24 text-slate-600 dark:text-slate-300">USA</span>
+              <input type="number" class="input-field flex-1" id="adj-USA" value="5" step="0.5">
+              <span class="text-xs text-slate-400 w-8">%</span>
+            </div>
+            <div class="flex gap-2 items-center text-sm">
+              <span class="w-24 text-slate-600 dark:text-slate-300">UK</span>
+              <input type="number" class="input-field flex-1" id="adj-UK" value="5" step="0.5">
+              <span class="text-xs text-slate-400 w-8">%</span>
+            </div>
+            <div class="flex gap-2 items-center text-sm">
+              <span class="w-24 text-slate-600 dark:text-slate-300">Australia</span>
+              <input type="number" class="input-field flex-1" id="adj-Australia" value="5" step="0.5">
+              <span class="text-xs text-slate-400 w-8">%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="panel-section-title">AI Model &amp; Behavior</div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Model</label>
+              <select class="input-field" id="s-ai-model">
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="claude-sonnet">Claude Sonnet</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="qwen">Qwen</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Confidence Threshold</label>
+              <input type="number" class="input-field" id="s-confidence" value="0.7" step="0.05" min="0" max="1">
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Auto-Quote Threshold</label>
+              <select class="input-field" id="s-auto-quote">
+                <option value="high">High Intent only</option>
+                <option value="hot">Hot &amp; High Intent</option>
+                <option value="all">All reviewed inquiries</option>
+                <option value="none">Manual only</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex gap-3">
+        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
+        <button class="btn btn-secondary" onclick="resetSettings()">Reset to Defaults</button>
+        <span class="text-xs text-green-600 dark:text-green-400 self-center hidden" id="s-saved-msg"><i class="fas fa-check mr-1"></i> Saved!</span>
+      </div>
+    </div>
+
+    <!-- QUALITY REPORT VIEW -->
+    <div id="view-report" class="view p-6 hidden">
+      <div class="mb-6">
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Quality Inspection Report</h1>
+        <p class="text-sm text-slate-500 mt-0.5">Quote processing metrics &amp; inspector performance</p>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Quotes</div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-total">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Approved</div>
+          <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="r-approved">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Rejected</div>
+          <div class="text-2xl font-bold text-red-600 dark:text-red-400" id="r-rejected">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Processing Time</div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-avgtime">0m</div>
+        </div>
+      </div>
+
+      <!-- Quote Records Table -->
+      <div class="card overflow-hidden mb-6">
+        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-600">
+          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">Recent Quote Decisions</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="data-table w-full">
+            <thead>
+              <tr>
+                <th>Inquiry ID</th><th>Company</th><th>Product</th><th>Quote Amount</th><th>Status</th><th>Processing Time</th><th>Inspector</th><th>Date</th>
+              </tr>
+            </thead>
+            <tbody id="report-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Rejection Reasons -->
+      <div class="card p-5">
+        <div class="panel-section-title">Rejection Analysis</div>
+        <div id="rejection-analysis"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===== PRINT VIEW (hidden, used for export) ===== -->
+  <div id="print-view" class="hidden print-only">
+    <h1>WITOP DECOR — AI QUOTATION SHEET</h1>
+    <div id="print-content"></div>
+  </div>
+
+<script>
+// ============================================================
+// DATA LAYER
+// ============================================================
+
+const PRODUCTS = ['WPC Wall Panel', 'SPC Flooring', 'UV Panel', 'WPC Ceiling'];
+const COUNTRIES = ['UAE', 'Saudi Arabia', 'USA', 'UK', 'Nigeria', 'Egypt', 'Philippines', 'Vietnam', 'Germany', 'Australia'];
+const INTENTS = ['Cold', 'Warm', 'Hot', 'High Intent'];
+const STATUSES = ['New', 'Reviewed', 'Quoted', 'Rejected'];
+const STATUS_COLORS = { New: '#64748b', Reviewed: '#2563eb', Quoted: '#16a34a', Rejected: '#dc2626' };
+
+// Mock inquiries — 18 records
+const MOCK_INQUIRIES = [
+  { id: 'INQ-001', company: 'Al Rashid Building Materials', country: 'UAE', product: 'WPC Wall Panel', intent: 'High Intent', status: 'Reviewed', date: '2026-09-15', qty: '2,400 sqm', thickness: '8mm', width: '1220mm', length: '2440mm', surface: 'Co-extrusion', color: 'Walnut', contact: 'Ahmed Al Rashid', email: 'ahmed@alrashid.ae', history: 'Regular importer — 3 prior orders, ~$80K total', notes: 'Looking for fast delivery. Need 20ft container ASAP.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-002', company: 'Gulf Interior Decoration LLC', country: 'Saudi Arabia', product: 'SPC Flooring', intent: 'Hot', status: 'Quoted', date: '2026-09-18', qty: '5,000 sqm', thickness: '5mm', width: '183mm', length: '1220mm', surface: 'UV Coating', color: 'Oak Light', contact: 'Sara Al-Mutairi', email: 'sara@gulfinterior.sa', history: 'New buyer — referred by Al Rashid', notes: 'Project for Ritz-Carlton Riyadh renovation. Quality is top priority.', quoteAmount: 28500, quoteBreakdown: { material: 15000, labor: 4500, logistics: 3500, marginPct: 20, margin: 4800, total: 24300 }, quoteHistory: [{ date: '2026-09-20', amount: 24300, status: 'Approved' }], rejectionReason: null },
+  { id: 'INQ-003', company: 'Pacific Coast Flooring', country: 'USA', product: 'SPC Flooring', intent: 'Warm', status: 'New', date: '2026-09-20', qty: '3,200 sqm', thickness: '6mm', width: '153mm', length: '1220mm', surface: 'Click System', color: 'Grey Oak', contact: 'Mike Johnson', email: 'mjohnson@pacificcoast.com', history: 'US distributor — first inquiry', notes: 'Interested in SPC for residential projects. Needs sample first.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-004', company: 'Kingfisher Supplies Ltd', country: 'UK', product: 'UV Panel', intent: 'High Intent', status: 'Reviewed', date: '2026-09-12', qty: '1,800 sqm', thickness: '12mm', width: '1220mm', length: '2440mm', surface: 'High Gloss', color: 'White', contact: 'James Clarke', email: 'jclarke@kingfisher.co.uk', history: 'UK retailer — 1 prior order ($15K)', notes: 'Urgent requirement for hotel fit-out. Delivery within 3 weeks.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-005', company: 'Lagos Building Solutions', country: 'Nigeria', product: 'WPC Wall Panel', intent: 'Cold', status: 'New', date: '2026-09-25', qty: '600 sqm', thickness: '6mm', width: '1220mm', length: '2440mm', surface: 'Embossed', color: 'Teak', contact: 'Chidi Okonkwo', email: 'chidi@lagosbuildings.ng', history: 'First inquiry — no purchase history', notes: 'Small project, price sensitive. Asking for CIF Lagos.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-006', company: 'Cairo Decorative Panels', country: 'Egypt', product: 'WPC Ceiling', intent: 'Warm', status: 'Reviewed', date: '2026-09-10', qty: '4,200 sqm', thickness: '7mm', width: '1220mm', length: '2440mm', surface: 'Laminated', color: 'Cream', contact: 'Omar Hassan', email: 'omar@cairopanels.com.eg', history: 'Regular client — $120K in past 2 years', notes: 'Government project. Payment via LC. Requires SGS inspection.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-007', company: 'Manila Hardware Corp', country: 'Philippines', product: 'SPC Flooring', intent: 'Hot', status: 'Reviewed', date: '2026-09-08', qty: '2,000 sqm', thickness: '5.5mm', width: '183mm', length: '1220mm', surface: 'UV Coating', color: 'Natural Oak', contact: 'Rosa Santos', email: 'rsantos@manilahardware.ph', history: 'Reseller — 5 prior container orders', notes: 'Building a new residential complex. Needs 3 containers.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-008', company: 'Hanoi Construction Materials', country: 'Vietnam', product: 'UV Panel', intent: 'Cold', status: 'New', date: '2026-09-28', qty: '300 sqm', thickness: '9mm', width: '1220mm', length: '2440mm', surface: 'Matte', color: 'Black', contact: 'Lan Nguyen', email: 'lan@hanoiconst.com.vn', history: 'New inquiry', notes: 'Sample order for interior design showcase.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-009', company: 'Bavaria Baustoffe GmbH', country: 'Germany', product: 'SPC Flooring', intent: 'Warm', status: 'Reviewed', date: '2026-09-05', qty: '8,000 sqm', thickness: '5mm', width: '153mm', length: '1220mm', surface: 'Click System', color: 'Grey', contact: 'Klaus Weber', email: 'k.weber@bavariabaustoffe.de', history: 'EU distributor — regular buyer, $200K+ history', notes: 'Large order for apartment complex. Needs CE certification docs.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-010', company: 'Sydney Interior Projects', country: 'Australia', product: 'WPC Wall Panel', intent: 'High Intent', status: 'Quoted', date: '2026-09-03', qty: '3,500 sqm', thickness: '8mm', width: '1220mm', length: '3000mm', surface: 'Co-extrusion', color: 'Charcoal', contact: 'Emma Walsh', email: 'emma@sydneyinterior.com.au', history: 'Repeat client — 2 prior orders, $45K', notes: 'High-end residential project. Premium finish required.', quoteAmount: 32000, quoteBreakdown: { material: 19250, labor: 5250, logistics: 3500, marginPct: 22, margin: 6160, total: 34160 }, quoteHistory: [{ date: '2026-09-06', amount: 34160, status: 'Approved' }], rejectionReason: null },
+  { id: 'INQ-011', company: 'Jeddah Modern Homes', country: 'Saudi Arabia', product: 'WPC Ceiling', intent: 'Hot', status: 'New', date: '2026-09-22', qty: '1,200 sqm', thickness: '7mm', width: '1220mm', length: '2440mm', surface: 'Perforated', color: 'White', contact: 'Fahad Al-Zahrani', email: 'fahad@jeddahmodernhomes.sa', history: 'New buyer — saw our product at Index Riyadh', notes: 'Residential villa project. Interested in WPC for ceiling.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-012', company: 'Dubai Elite Interiors', country: 'UAE', product: 'UV Panel', intent: 'High Intent', status: 'Reviewed', date: '2026-09-01', qty: '6,000 sqm', thickness: '12mm', width: '1220mm', length: '2440mm', surface: 'High Gloss', color: 'Glossy White', contact: 'Noor Al-Maktoum', email: 'noor@dubaielite.ae', history: 'Premium client — $150K history', notes: 'Mall renovation project. Delivery to Jebel Ali port required.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-013', company: 'Abu Dhabi Construction', country: 'UAE', product: 'SPC Flooring', intent: 'Warm', status: 'Rejected', date: '2026-08-28', qty: '900 sqm', thickness: '6mm', width: '153mm', length: '1220mm', surface: 'Click System', color: 'Walnut', contact: 'Khalid Al-Sayed', email: 'khalid@adconstruction.ae', history: 'One prior order ($22K)', notes: 'Project delayed — budget frozen for Q4.', quoteAmount: 9800, quoteBreakdown: { material: 5880, labor: 1350, logistics: 700, marginPct: 20, margin: 1586, total: 9516 }, quoteHistory: [{ date: '2026-09-01', amount: 9516, status: 'Rejected' }], rejectionReason: 'Project budget frozen for Q4 2026' },
+  { id: 'INQ-014', company: 'Lagos Premium Interiors', country: 'Nigeria', product: 'WPC Wall Panel', intent: 'Cold', status: 'New', date: '2026-09-30', qty: '400 sqm', thickness: '6mm', width: '1220mm', length: '2440mm', surface: 'Embossed', color: 'Mahogany', contact: 'Adebola Adeyemi', email: 'adebola@lagospremium.ng', history: 'New inquiry', notes: 'Interior decoration for a hotel lobby.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-015', company: 'Manchester Property Holdings', country: 'UK', product: 'SPC Flooring', intent: 'Warm', status: 'Reviewed', date: '2026-09-17', qty: '4,500 sqm', thickness: '5mm', width: '183mm', length: '1220mm', surface: 'UV Coating', color: 'Oak', contact: 'David Hughes', email: 'd.hughes@manchesterproperty.co.uk', history: 'UK developer — 2 prior orders', notes: 'Student accommodation project. Fire rating required (Class B).', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-016', company: 'Cairo tiles &amp; more', country: 'Egypt', product: 'WPC Wall Panel', intent: 'Hot', status: 'Reviewed', date: '2026-09-14', qty: '2,800 sqm', thickness: '8mm', width: '1220mm', length: '2440mm', surface: 'Co-extrusion', color: 'Grey', contact: 'Youssef Ibrahim', email: 'y.ibrahim@cairotiles.com.eg', history: 'Regular — 4 prior orders, $75K total', notes: 'Commercial project. Payment terms: 30% deposit, 70% LC.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-017', company: 'Melbourne Building Supplies', country: 'Australia', product: 'UV Panel', intent: 'Warm', status: 'New', date: '2026-10-02', qty: '1,100 sqm', thickness: '9mm', width: '1220mm', length: '2440mm', surface: 'Matte', color: 'White', contact: 'Tom Richards', email: 'tom@melbournebuildings.com.au', history: 'New buyer', notes: 'Interior wall panel project. Interested in UV Panel for kitchen backsplash.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+  { id: 'INQ-018', company: 'Riyadh Stone &amp; Decor', country: 'Saudi Arabia', product: 'WPC Wall Panel', intent: 'Cold', status: 'New', date: '2026-10-03', qty: '500 sqm', thickness: '6mm', width: '1220mm', length: '2440mm', surface: 'Embossed', color: 'Natural Wood', contact: 'Sultan Al-Dosari', email: 'sultan@riyadhstone.sa', history: 'New inquiry', notes: 'Small residential project. Requesting CIF Riyadh pricing.', quoteAmount: null, quoteBreakdown: null, quoteHistory: [] },
+];
+
+// State
+let inquiries = [];
+let quoteRecords = [];
+let selectedInquiry = null;
+let currentView = 'dashboard';
+let settings = {};
+
+// ============================================================
+// INIT
+// ============================================================
+
+function init() {
+  // TODO: Connect to database — load inquiries
+  const saved = localStorage.getItem('witop_inquiries');
+  inquiries = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(MOCK_INQUIRIES));
+
+  const savedSettings = localStorage.getItem('witop_settings');
+  settings = savedSettings ? JSON.parse(savedSettings) : getDefaultSettings();
+
+  const savedRecords = localStorage.getItem('witop_records');
+  quoteRecords = savedRecords ? JSON.parse(savedRecords) : [];
+
+  persist();
+  applySettings();
+  renderDashboard();
+  showView('dashboard');
+}
+
+function persist() {
+  localStorage.setItem('witop_inquiries', JSON.stringify(inquiries));
+  localStorage.setItem('witop_settings', JSON.stringify(settings));
+  localStorage.setItem('witop_records', JSON.stringify(quoteRecords));
+}
+
+function getDefaultSettings() {
+  return {
+    margin: 20,
+    matRule: 'fixed',
+    matCost: 12.50,
+    labor: 3.00,
+    logisticsBase: 3500,
+    containerSqm: 700,
+    aiModel: 'gpt-4o',
+    confidence: 0.7,
+    autoQuote: 'high',
+    adjustments: { 'UAE': 0, 'Saudi Arabia': 0, 'USA': 5, 'UK': 5, 'Nigeria': -3, 'Egypt': -2, 'Philippines': -2, 'Vietnam': -3, 'Germany': 5, 'Australia': 5 }
+  };
+}
+
+function applySettings() {
+  document.getElementById('s-margin').value = settings.margin;
+  document.getElementById('s-mat-rule').value = settings.matRule;
+  document.getElementById('s-mat-cost').value = settings.matCost;
+  document.getElementById('s-labor').value = settings.labor;
+  document.getElementById('s-logistics-base').value = settings.logisticsBase;
+  document.getElementById('s-container-sqm').value = settings.containerSqm;
+  document.getElementById('s-ai-model').value = settings.aiModel;
+  document.getElementById('s-confidence').value = settings.confidence;
+  document.getElementById('s-auto-quote').value = settings.autoQuote;
+  for (const [k, v] of Object.entries(settings.adjustments)) {
+    const el = document.getElementById('adj-' + k);
+    if (el) el.value = v;
+  }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function showView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  document.getElementById('view-' + name).classList.remove('hidden');
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  const nav = document.getElementById('nav-' + name);
+  if (nav) nav.classList.add('active');
+
+  if (name === 'dashboard') renderDashboard();
+  else if (name === 'inquiries') renderInquiries();
+  else if (name === 'settings') renderSettings();
+  else if (name === 'report') renderReport();
+  else if (name === 'quote-panel') { /* keep current selection */ }
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+
+function renderDashboard() {
+  const fs = getDashboardFilters();
+  const filtered = filterInquiries(inquiries, fs);
+
+  const total = inquiries.length;
+  const handled = inquiries.filter(i => i.status === 'Quoted' || i.status === 'Rejected').length;
+  const highIntent = inquiries.filter(i => i.intent === 'High Intent').length;
+  const unhandled = inquiries.filter(i => i.status === 'New').length;
+
+  document.getElementById('stat-total').textContent = total.toLocaleString();
+  document.getElementById('stat-handled').textContent = handled.toLocaleString();
+  document.getElementById('stat-highintent').textContent = highIntent.toLocaleString();
+  document.getElementById('stat-unhandled').textContent = unhandled.toLocaleString();
+
+  // Funnel
+  const stages = [
+    { label: 'New', count: inquiries.filter(i => i.status === 'New').length, color: '#64748b' },
+    { label: 'Reviewed', count: inquiries.filter(i => i.status === 'Reviewed').length, color: '#2563eb' },
+    { label: 'Quoted', count: inquiries.filter(i => i.status === 'Quoted').length, color: '#16a34a' },
+    { label: 'Rejected', count: inquiries.filter(i => i.status === 'Rejected').length, color: '#dc2626' },
+  ];
+  const maxCount = Math.max(...stages.map(s => s.count), 1);
+  const funnelHTML = stages.map(s => {
+    const pct = Math.max((s.count / maxCount) * 100, 8);
+    return `<div class="flex items-center gap-3">
+      <div class="w-20 text-xs text-slate-500 dark:text-slate-400 text-right">${s.label}</div>
+      <div class="flex-1 bg-slate-100 dark:bg-slate-700 rounded-full h-7 overflow-hidden">
+        <div class="chart-bar h-full rounded-full" style="width:${pct}%; background:${s.color}">${s.count}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('funnel-container').innerHTML = funnelHTML;
+
+  // Recent table
+  const recent = [...inquiries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  const tbody = document.getElementById('recent-table-body');
+  tbody.innerHTML = recent.map(i => tableRowHTML(i)).join('');
+}
+
+function getDashboardFilters() {
+  return {
+    status: document.getElementById('dash-filter-status').value,
+    intent: document.getElementById('dash-filter-intent').value,
+    country: document.getElementById('dash-filter-country').value,
+    product: document.getElementById('dash-filter-product').value,
+    from: document.getElementById('dash-filter-from').value,
+    to: document.getElementById('dash-filter-to').value,
+  };
+}
+
+function clearDashboardFilters() {
+  ['dash-filter-status','dash-filter-intent','dash-filter-country','dash-filter-product','dash-filter-from','dash-filter-to'].forEach(id => document.getElementById(id).value = '');
+  renderDashboard();
+}
+
+// ============================================================
+// INQUIRIES LIST
+// ============================================================
+
+function renderInquiries() {
+  const filtered = filterInquiries(inquiries, {
+    search: document.getElementById('inq-search').value,
+    status: document.getElementById('inq-status').value,
+    intent: document.getElementById('inq-intent').value,
+    product: document.getElementById('inq-product').value,
+  });
+  const sorted = sortInquiriesRaw(filtered, document.getElementById('inq-sort').value);
+  const tbody = document.getElementById('inq-table-body');
+  tbody.innerHTML = sorted.map(i => tableRowHTML(i)).join('');
+  document.getElementById('inq-count').textContent = `${filtered.length} of ${inquiries.length} inquiries`;
+}
+
+function filterInquiries(list, f) {
+  return list.filter(i => {
+    if (f.status && i.status !== f.status) return false;
+    if (f.intent && i.intent !== f.intent) return false;
+    if (f.country && i.country !== f.country) return false;
+    if (f.product && i.product !== f.product) return false;
+    if (f.from && i.date < f.from) return false;
+    if (f.to && i.date > f.to) return false;
+    if (f.search) {
+      const s = f.search.toLowerCase();
+      if (!i.company.toLowerCase().includes(s) && !i.country.toLowerCase().includes(s) && !i.product.toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+}
+
+function sortInquiriesRaw(list, key) {
+  const [field, dir] = key.split('-');
+  const cmp = (a, b) => {
+    if (field === 'amount') return (a.quoteAmount || 0) - (b.quoteAmount || 0);
+    if (field === 'date') return a.date.localeCompare(b.date);
+    return a[field].localeCompare(b[field]);
+  };
+  return [...list].sort(dir === 'desc' ? (a, b) => -cmp(a, b) : cmp);
+}
+
+let sortCol = null, sortDir = 'asc';
+function sortInquiries(col) {
+  if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortCol = col; sortDir = 'asc'; }
+  const filtered = filterInquiries(inquiries, {
+    status: document.getElementById('inq-status').value,
+    intent: document.getElementById('inq-intent').value,
+    product: document.getElementById('inq-product').value,
+  });
+  const sorted = sortInquiriesRaw(filtered, col + '-' + sortDir);
+  document.getElementById('inq-table-body').innerHTML = sorted.map(i => tableRowHTML(i)).join('');
+}
+
+function tableRowHTML(i) {
+  const sel = selectedInquiry && selectedInquiry.id === i.id ? 'selected' : '';
+  return `<tr class="${sel}" onclick="openQuotePanel('${i.id}')">
+    <td class="font-mono text-xs text-slate-500">${i.id}</td>
+    <td class="font-medium text-slate-900 dark:text-white">${escHtml(i.company)}</td>
+    <td>${flag(i.country)} ${i.country}</td>
+    <td class="text-slate-600 dark:text-slate-300">${i.product}</td>
+    <td>${intentBadge(i.intent)}</td>
+    <td><span class="inline-flex items-center gap-1.5"><span class="status-dot" style="background:${STATUS_COLORS[i.status]}"></span>${i.status}</span></td>
+    <td class="text-slate-500 text-xs">${i.date}</td>
+    <td class="font-semibold text-slate-900 dark:text-white">${i.quoteAmount ? '$' + i.quoteAmount.toLocaleString() : '—'}</td>
+  </tr>`;
+}
+
+function intentBadge(intent) {
+  const cls = { Cold: 'intent-cold', Warm: 'intent-warm', Hot: 'intent-hot', 'High Intent': 'intent-high' }[intent] || 'intent-cold';
+  return `<span class="intent-badge ${cls}">${intent}</span>`;
+}
+
+function flag(country) {
+  const flags = { 'UAE': '🇦🇪', 'Saudi Arabia': '🇸🇦', 'USA': '🇺🇸', 'UK': '🇬🇧', 'Nigeria': '🇳🇬', 'Egypt': '🇪🇬', 'Philippines': '🇵🇭', 'Vietnam': '🇻🇳', 'Germany': '🇩🇪', 'Australia': '🇦🇺' };
+  return flags[country] || '🌐';
+}
+
+// ============================================================
+// QUOTE PANEL
+// ============================================================
+
+function openQuotePanel(id) {
+  const inq = inquiries.find(i => i.id === id);
+  if (!inq) return;
+  selectedInquiry = inq;
+
+  document.getElementById('qp-empty').classList.add('hidden');
+  document.getElementById('qp-buyer').classList.remove('hidden');
+  document.getElementById('qp-quote-area').classList.remove('hidden');
+
+  document.getElementById('qp-company').textContent = inq.company;
+  document.getElementById('qp-country').textContent = inq.country;
+  document.getElementById('qp-contact').textContent = inq.contact;
+  document.getElementById('qp-email').textContent = inq.email;
+  document.getElementById('qp-history').textContent = inq.history;
+  document.getElementById('qp-intent-badge').innerHTML = intentBadge(inq.intent);
+  document.getElementById('qp-product').textContent = inq.product;
+  document.getElementById('qp-qty').textContent = inq.qty;
+  document.getElementById('qp-thickness').textContent = inq.thickness;
+  document.getElementById('qp-width').textContent = inq.width;
+  document.getElementById('qp-length').textContent = inq.length;
+  document.getElementById('qp-surface').textContent = inq.surface;
+  document.getElementById('qp-color').textContent = inq.color;
+  document.getElementById('qp-notes').textContent = inq.notes;
+
+  renderQuote(inq);
+  showView('quote-panel');
+}
+
+function renderQuote(inq) {
+  if (!inq) return;
+
+  // Generate AI quote if not exists
+  if (!inq.quoteBreakdown) {
+    // TODO: AI quote generation API — generate quote based on settings and inquiry
+    inq.quoteBreakdown = generateMockQuote(inq);
+  }
+
+  const b = inq.quoteBreakdown;
+  document.getElementById('q-matcost').textContent = '$' + b.material.toLocaleString();
+  document.getElementById('q-labcost').textContent = '$' + b.labor.toLocaleString();
+  document.getElementById('q-logistics').textContent = '$' + b.logistics.toLocaleString();
+  const subtotal = b.material + b.labor + b.logistics;
+  document.getElementById('q-subtotal').textContent = '$' + subtotal.toLocaleString();
+  document.getElementById('q-marginpct').textContent = b.marginPct;
+  document.getElementById('q-margin').textContent = '$' + b.margin.toLocaleString();
+  document.getElementById('q-total').textContent = '$' + b.total.toLocaleString();
+
+  // Unit price from qty
+  const qtyNum = parseFloat(inq.qty.replace(/[^0-9.]/g, '')) || 1000;
+  document.getElementById('q-unitprice').textContent = '$' + (b.total / qtyNum).toFixed(2) + '/sqm';
+
+  const qtyNum2 = parseFloat(inq.qty.replace(/[^0-9.]/g, '')) || 1000;
+  document.getElementById('q-meta').textContent = `Generated: ${new Date().toLocaleString()} | Unit price: $${(b.total / qtyNum2).toFixed(2)}/sqm | Margin: ${b.marginPct}%`;
+
+  // Quote history
+  const hist = inq.quoteHistory || [];
+  const histHTML = hist.length === 0
+    ? '<div class="text-sm text-slate-400 dark:text-slate-500">No prior quotes</div>'
+    : hist.map(h => `<div class="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700 last:border-0 text-sm">
+        <div><div class="text-slate-700 dark:text-slate-200">$${h.amount.toLocaleString()}</div><div class="text-xs text-slate-400">${h.date} · ${h.status}</div></div>
+        <span class="intent-badge ${h.status === 'Approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${h.status}</span>
+      </div>`).join('');
+  document.getElementById('q-history-list').innerHTML = histHTML;
+
+  // Show appropriate action buttons based on current status
+  const actionsEl = document.getElementById('q-actions');
+  if (inq.status === 'Quoted') {
+    actionsEl.innerHTML = `<div class="text-sm text-green-600 dark:text-green-400 font-semibold"><i class="fas fa-check-circle mr-1"></i> Quote Approved — $${inq.quoteAmount.toLocaleString()}</div>
+      <button class="btn btn-secondary btn-sm" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>`;
+  } else if (inq.status === 'Rejected') {
+    actionsEl.innerHTML = `<div class="text-sm text-red-600 dark:text-red-400 font-semibold"><i class="fas fa-xmark-circle mr-1"></i> Rejected: ${inq.rejectionReason || 'No reason provided'}</div>
+      <button class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate"></i> Regenerate</button>`;
+  } else {
+    actionsEl.innerHTML = `
+      <button class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
+      <button class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
+      <button class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>`;
+  }
+}
+
+function generateMockQuote(inq) {
+  // TODO: AI quote generation API — this is the mock implementation
+  const qtyNum = parseFloat(inq.qty.replace(/[^0-9.]/g, '')) || 1000;
+  const matCost = qtyNum * settings.matCost;
+  const laborCost = qtyNum * settings.labor;
+  const containerSqm = settings.containerSqm;
+  const numContainers = Math.max(1, Math.ceil(qtyNum / containerSqm));
+  const logistics = numContainers * settings.logisticsBase;
+  const subtotal = matCost + laborCost + logistics;
+  const adj = (settings.adjustments[inq.country] || 0) / 100;
+  const marginPct = Math.max(5, Math.min(50, settings.margin + adj * 100));
+  const margin = Math.round(subtotal * (marginPct / 100));
+  const total = subtotal + margin;
+  return { material: Math.round(matCost), labor: Math.round(laborCost), logistics: Math.round(logistics), marginPct: Math.round(marginPct), margin, total: Math.round(total) };
+}
+
+function regenerateQuote() {
+  if (!selectedInquiry) return;
+  // TODO: AI quote generation API — re-generate with updated settings
+  selectedInquiry.quoteBreakdown = generateMockQuote(selectedInquiry);
+  selectedInquiry.quoteAmount = null;
+  persist();
+  renderQuote(selectedInquiry);
+  renderDashboard();
+}
+
+function showEditForm() {
+  if (!selectedInquiry) return;
+  const b = selectedInquiry.quoteBreakdown;
+  document.getElementById('edit-matcost').value = b.material;
+  document.getElementById('edit-labcost').value = b.labor;
+  document.getElementById('edit-logistics').value = b.logistics;
+  document.getElementById('edit-marginpct').value = b.marginPct;
+  document.getElementById('q-edit-area').classList.remove('hidden');
+}
+
+function applyEdit() {
+  if (!selectedInquiry) return;
+  const material = parseFloat(document.getElementById('edit-matcost').value) || 0;
+  const labor = parseFloat(document.getElementById('edit-labcost').value) || 0;
+  const logistics = parseFloat(document.getElementById('edit-logistics').value) || 0;
+  const marginPct = parseFloat(document.getElementById('edit-marginpct').value) || 20;
+  const subtotal = material + labor + logistics;
+  const margin = Math.round(subtotal * (marginPct / 100));
+  const total = subtotal + margin;
+
+  selectedInquiry.quoteBreakdown = { material, labor, logistics, marginPct, margin, total };
+  selectedInquiry.quoteAmount = null;
+  document.getElementById('q-edit-area').classList.add('hidden');
+  persist();
+  renderQuote(selectedInquiry);
+}
+
+function cancelEdit() {
+  document.getElementById('q-edit-area').classList.add('hidden');
+}
+
+function approveQuote() {
+  if (!selectedInquiry) return;
+  const now = new Date().toISOString().slice(0, 10);
+  const amount = selectedInquiry.quoteBreakdown.total;
+  selectedInquiry.status = 'Quoted';
+  selectedInquiry.quoteAmount = amount;
+  selectedInquiry.quoteHistory = selectedInquiry.quoteHistory || [];
+  selectedInquiry.quoteHistory.push({ date: now, amount, status: 'Approved' });
+
+  // TODO: Connect to database — save quote record
+  quoteRecords.push({
+    id: 'QR-' + String(quoteRecords.length + 1).padStart(4, '0'),
+    inquiryId: selectedInquiry.id,
+    company: selectedInquiry.company,
+    product: selectedInquiry.product,
+    amount,
+    status: 'Approved',
+    processedAt: new Date().toISOString(),
+    processingTime: Math.floor(Math.random() * 20) + 5 + 'm',
+    inspector: 'James Zheng'
+  });
+
+  persist();
+  renderQuote(selectedInquiry);
+  renderDashboard();
+  renderReport();
+}
+
+function showRejectForm() {
+  document.getElementById('q-reject-form').classList.remove('hidden');
+}
+
+function cancelReject() {
+  document.getElementById('q-reject-form').classList.add('hidden');
+  document.getElementById('reject-reason').value = '';
+}
+
+function confirmReject() {
+  if (!selectedInquiry) return;
+  const now = new Date().toISOString().slice(0, 10);
+  const amount = selectedInquiry.quoteBreakdown.total;
+  selectedInquiry.status = 'Rejected';
+  selectedInquiry.quoteAmount = null;
+  selectedInquiry.rejectionReason = document.getElementById('reject-reason').value || 'No reason provided';
+  selectedInquiry.quoteHistory = selectedInquiry.quoteHistory || [];
+  selectedInquiry.quoteHistory.push({ date: now, amount, status: 'Rejected' });
+
+  // TODO: Connect to database — save quote record
+  quoteRecords.push({
+    id: 'QR-' + String(quoteRecords.length + 1).padStart(4, '0'),
+    inquiryId: selectedInquiry.id,
+    company: selectedInquiry.company,
+    product: selectedInquiry.product,
+    amount,
+    status: 'Rejected',
+    processedAt: new Date().toISOString(),
+    processingTime: Math.floor(Math.random() * 20) + 5 + 'm',
+    inspector: 'James Zheng',
+    reason: selectedInquiry.rejectionReason
+  });
+
+  persist();
+  cancelReject();
+  renderQuote(selectedInquiry);
+  renderDashboard();
+  renderReport();
+}
+
+function printQuote() {
+  if (!selectedInquiry) return;
+  const b = selectedInquiry.quoteBreakdown;
+  const qtyNum = parseFloat(selectedInquiry.qty.replace(/[^0-9.]/g, '')) || 1000;
+  const content = `
+QUOTATION SHEET — WITOP DECOR
+=============================
+Company: ${selectedInquiry.company}
+Country: ${selectedInquiry.country}
+Contact: ${selectedInquiry.contact}
+Email: ${selectedInquiry.email}
+Date: ${new Date().toLocaleDateString()}
+
+PRODUCT SPECIFICATIONS
+----------------------
+Product: ${selectedInquiry.product}
+Quantity: ${selectedInquiry.qty}
+Thickness: ${selectedInquiry.thickness}
+Width: ${selectedInquiry.width}
+Length: ${selectedInquiry.length}
+Surface: ${selectedInquiry.surface}
+Color: ${selectedInquiry.color}
+
+PRICE BREAKDOWN (FOB China)
+----------------------------
+Material Cost:  $${b.material.toLocaleString()}
+Labor Cost:     $${b.labor.toLocaleString()}
+Logistics:      $${b.logistics.toLocaleString()}
+Subtotal:       $${(b.material+b.labor+b.logistics).toLocaleString()}
+Margin (${b.marginPct}%):  $${b.margin.toLocaleString()}
+TOTAL (FOB):    $${b.total.toLocaleString()}
+
+Unit Price: $${(b.total/qtyNum).toFixed(2)}/sqm
+
+Notes: ${selectedInquiry.notes}
+
+Generated by Witop Decor AI Quote System
+  `.trim();
+  const win = window.open('', '_blank');
+  win.document.write('<pre style="font-family:monospace;font-size:13px;padding:20px;white-space:pre-wrap">' + content + '</pre>');
+  win.document.close();
+  win.print();
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+
+function renderSettings() {
+  applySettings();
+}
+
+function saveSettings() {
+  settings.margin = parseFloat(document.getElementById('s-margin').value) || 20;
+  settings.matRule = document.getElementById('s-mat-rule').value;
+  settings.matCost = parseFloat(document.getElementById('s-mat-cost').value) || 12.50;
+  settings.labor = parseFloat(document.getElementById('s-labor').value) || 3.00;
+  settings.logisticsBase = parseFloat(document.getElementById('s-logistics-base').value) || 3500;
+  settings.containerSqm = parseFloat(document.getElementById('s-container-sqm').value) || 700;
+  settings.aiModel = document.getElementById('s-ai-model').value;
+  settings.confidence = parseFloat(document.getElementById('s-confidence').value) || 0.7;
+  settings.autoQuote = document.getElementById('s-auto-quote').value;
+  settings.adjustments = {};
+  COUNTRIES.forEach(c => {
+    const el = document.getElementById('adj-' + c);
+    if (el) settings.adjustments[c] = parseFloat(el.value) || 0;
+  });
+  persist();
+  const msg = document.getElementById('s-saved-msg');
+  msg.classList.remove('hidden');
+  setTimeout(() => msg.classList.add('hidden'), 2000);
+}
+
+function resetSettings() {
+  settings = getDefaultSettings();
+  persist();
+  applySettings();
+}
+
+// ============================================================
+// QUALITY REPORT
+// ============================================================
+
+function renderReport() {
+  const approved = quoteRecords.filter(r => r.status === 'Approved');
+  const rejected = quoteRecords.filter(r => r.status === 'Rejected');
+  const total = quoteRecords.length;
+  const avgTime = total > 0
+    ? Math.round(approved.concat(rejected).reduce((sum, r) => sum + parseInt(r.processingTime), 0) / total)
+    : 0;
+
+  document.getElementById('r-total').textContent = total;
+  document.getElementById('r-approved').textContent = approved.length;
+  document.getElementById('r-rejected').textContent = rejected.length;
+  document.getElementById('r-avgtime').textContent = avgTime + 'm';
+
+  // Table
+  const sorted = [...quoteRecords].sort((a, b) => b.processedAt.localeCompare(a.processedAt));
+  document.getElementById('report-table-body').innerHTML = sorted.map(r => `
+    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700">
+      <td class="font-mono text-xs text-slate-500">${r.inquiryId}</td>
+      <td class="font-medium text-slate-900 dark:text-white">${escHtml(r.company)}</td>
+      <td class="text-slate-600 dark:text-slate-300">${r.product}</td>
+      <td class="font-semibold text-slate-900 dark:text-white">$${r.amount.toLocaleString()}</td>
+      <td><span class="inline-flex items-center gap-1.5"><span class="status-dot" style="background:${r.status === 'Approved' ? '#16a34a' : '#dc2626'}"></span>${r.status}</span></td>
+      <td class="text-slate-600 dark:text-slate-300">${r.processingTime}</td>
+      <td class="text-slate-600 dark:text-slate-300">${r.inspector}</td>
+      <td class="text-xs text-slate-500">${r.processedAt ? r.processedAt.slice(0, 10) : '—'}</td>
+    </tr>`).join('') || '<tr><td colspan="8" class="text-center py-6 text-slate-400 text-sm">No quote records yet</td></tr>';
+
+  // Rejection analysis
+  const rejectionGroups = {};
+  rejected.forEach(r => {
+    const reason = r.reason || 'Unknown';
+    if (!rejectionGroups[reason]) rejectionGroups[reason] = { reason, count: 0, total: 0 };
+    rejectionGroups[reason].count++;
+    rejectionGroups[reason].total += r.amount;
+  });
+  const analysisHTML = Object.values(rejectionGroups).length === 0
+    ? '<div class="text-sm text-slate-400 dark:text-slate-500">No rejections recorded</div>'
+    : Object.values(rejectionGroups).sort((a, b) => b.count - a.count).map(g => `
+      <div class="flex justify-between items-center py-2 border-b border-slate-100 dark:border-slate-700 text-sm last:border-0">
+        <div>
+          <div class="text-slate-700 dark:text-slate-200">${escHtml(g.reason)}</div>
+          <div class="text-xs text-slate-400">${g.count} rejection${g.count > 1 ? 's' : ''} · $${g.total.toLocaleString()} lost value</div>
+        </div>
+        <div class="text-xs text-slate-400">${g.count}x</div>
+      </div>`).join('');
+  document.getElementById('rejection-analysis').innerHTML = analysisHTML;
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Dark mode toggle — detect system preference
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.documentElement.classList.add('dark');
+}
+
+init();
+</script>
+</body>
+</html>
