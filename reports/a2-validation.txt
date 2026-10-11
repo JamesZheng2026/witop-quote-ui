@@ -1,11 +1,11 @@
 === A2 Validation ===
-Target: /Users/james/witop-quote-ui/index.html
-Date: 2026-10-10T09:04:23.523Z
+Target: /Users/james/witop-quote-ui/.worktrees/v3-01-reception-skeleton/index.html
+Date: 2026-10-11T15:57:43.853Z
 Baseline: f6b793b (A1 script inspected read-only; no A1 code imported)
 PASS HTML/body structure pairs
 PASS All IDs unique (including new IDs)
-PASS All 28 new IDs contain no whitespace
-PASS All 27 new/changed buttons have type="button"
+PASS All 76 new IDs contain no whitespace
+PASS All 39 new/changed buttons have type="button"
 PASS A1 Saudi Arabia ID preserved exactly
 WARN A1 legacy id="adj-Saudi Arabia" remains intentionally; see fix/html-issues-round1.
 WARN 4 unchanged baseline buttons lack type; A1 owns these.
@@ -61,4 +61,4 @@ DOM harness views checked: 6/6 (not browser visual rendering).
 PASS: 50
 FAIL: 0
 WARN: 4
-Report: /Users/james/witop-quote-ui/reports/a2-validation.txt
+Report: /Users/james/witop-quote-ui/.worktrees/v3-01-reception-skeleton/reports/a2-validation.txt
