@@ -1,6 +1,6 @@
 === V3-01b Validation (i18n + OKKI style) ===
-Target: /Users/james/witop-quote-ui/.worktrees/v3-01b-i18n-okki-style/index.html
-Date: 2026-10-12T02:57:14.810Z
+Target: /Users/james/witop-quote-ui/index.html
+Date: 2026-10-12T03:08:19.096Z
 Base: feat/v3-02-state-machine @ f719f68
 PASS A1: 新增 stepper 容器 #reception-stepper
 PASS A2: 4 个 stepper 阶段 (data-stage)
@@ -28,15 +28,14 @@ PASS C6: state.js 单元测试仍通过
   [累计] 继承 V3-01 75 PASS
 PASS C7: V3-01 验证脚本仍通过 (75 PASS / 0 FAIL)
 PASS C8: HTML 标签配对正确
-WARN verify-a2.sh 非 0 退出, 但允许 A2 区可能存在的历史 warn: 
-  [累计] 继承 A2 12 PASS
+  [累计] 继承 A2 50 PASS
 PASS C9: A2 验证脚本 (verify-a2.sh) 仍通过
   [累计] 继承 state.js 39 PASS
 PASS C10: state.js 单元测试 PASS 数
 
 === V3-01b Summary ===
-PASS: 153
+PASS: 191
 FAIL: 0
-WARN: 1
+WARN: 0
 Target: >=85 PASS / 0 FAIL MET ✓
-Report: /Users/james/witop-quote-ui/.worktrees/v3-01b-i18n-okki-style/reports/v3-01b-validation.txt
+Report: /Users/james/witop-quote-ui/reports/v3-01b-validation.txt

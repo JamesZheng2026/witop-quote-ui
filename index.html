@@ -861,6 +861,39 @@
     <div id="inquiry-status-history"></div>
   </div>
 
+
+<script>
+// V3-01b Visual QA helper: ?view=reception-workbench&drawer=REC-001&trigger=1
+// 仅在 file:// + 包含 ?view= 时生效, 跑完即清. 不影响正常使用.
+(function() {
+  try {
+    var p = new URLSearchParams(location.search);
+    var view = p.get('view');
+    if (!view) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() { applyView(view, p); });
+    } else {
+      applyView(view, p);
+    }
+    function applyView(view, p) {
+      var nav = document.getElementById('nav-' + view);
+      if (nav) nav.click();
+      else document.querySelectorAll('.view').forEach(function(v) { v.classList.add('hidden'); });
+      var d = p.get('drawer');
+      if (d) {
+        var btn = document.querySelector('#reception-table-body button[onclick*="openReceptionDetail(\'' + d + '\')"]');
+        if (btn) setTimeout(function() { btn.click(); }, 200);
+      }
+      if (p.get('trigger') === '1') {
+        setTimeout(function() {
+          var tn = document.getElementById('nav-reception-triggers');
+          if (tn) tn.click();
+        }, 200);
+      }
+    }
+  } catch (e) { /* ignore */ }
+})();
+</script>
 <script>
 // Provider boundary: deterministic mock/rules today; no outbound LLM requests.
 (function (root) {
@@ -2128,38 +2161,6 @@ if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').match
 }
 
 init();
-</script>
-<script>
-// V3-01b Visual QA helper: ?view=reception-workbench&drawer=REC-001&trigger=1
-// 仅在 file:// + 包含 ?view= 时生效, 跑完即清. 不影响正常使用.
-(function() {
-  try {
-    var p = new URLSearchParams(location.search);
-    var view = p.get('view');
-    if (!view) return;
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function() { applyView(view, p); });
-    } else {
-      applyView(view, p);
-    }
-    function applyView(view, p) {
-      var nav = document.getElementById('nav-' + view);
-      if (nav) nav.click();
-      else document.querySelectorAll('.view').forEach(function(v) { v.classList.add('hidden'); });
-      var d = p.get('drawer');
-      if (d) {
-        var btn = document.querySelector('#reception-table-body button[onclick*="openReceptionDetail(\'' + d + '\')"]');
-        if (btn) setTimeout(function() { btn.click(); }, 200);
-      }
-      if (p.get('trigger') === '1') {
-        setTimeout(function() {
-          var tn = document.getElementById('nav-reception-triggers');
-          if (tn) tn.click();
-        }, 200);
-      }
-    }
-  } catch (e) { /* ignore */ }
-})();
 </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 === V3-01 Validation ===
-Target: /Users/james/witop-quote-ui/.worktrees/v3-01b-i18n-okki-style/index.html
-Date: 2026-10-12T02:57:14.910Z
+Target: /Users/james/witop-quote-ui/index.html
+Date: 2026-10-12T03:08:19.195Z
 Parent branch: feat/v3-reception-workbench (HEAD 8c0af4b) — this branch: feat/v3-01-reception-skeleton
 PASS HTML/body/main structure pairs
 PASS All IDs unique
@@ -86,4 +86,4 @@ PASS: 75
 FAIL: 0
 WARN: 2
 Target (≥70 PASS / 0 FAIL — A2 regression 50 + v3-01 specific ≥20): MET ✓
-Report: /Users/james/witop-quote-ui/.worktrees/v3-01b-i18n-okki-style/reports/v3-01-validation.txt
+Report: /Users/james/witop-quote-ui/reports/v3-01-validation.txt
