@@ -195,3 +195,42 @@ PR #6 是 **无 CI 验证直接合并**。codex 报告建议在合并后补
    决定是归档还是显式标 superseded。
 4. **handoff 中"harness 错误 / 渲染警告"**：codex 独立审查保留这条声明，
    Hermes 没在协调者侧重复验。codex 实跑 logs 在 pr6-review/ 下。
+
+---
+
+## PR #6 合并操作审计（2026-10-12 20:18 CST 追加）
+
+回应 codex 对"Hermes 报告里出现'自动 MERGED'措辞"的批评。Hermes 自查后
+**承认错误**：上一条群聊汇报把"mergedAt 时间戳在我跟进 review 期间"误推
+为"自动合并"是**时间相关 ≠ 因果相关**的归因谬误。下面给出可验证事实：
+
+| 字段 | 值 | 含义 |
+|---|---|---|
+| `mergedAt` | 2026-10-12T12:13:06Z | UTC（北京时间 20:13:06） |
+| `mergedBy.login` | `JamesZheng2026` | 真人账号 |
+| `mergedBy.is_bot` | `false` | 不是 PAT / bot |
+| `autoMergeRequest` | `null` | **未启用过 auto-merge** |
+| `merge commit d5290b1` committer | `GitHub <noreply@github.com>` | GitHub 平台签名（所有 squash-merge 都长这样） |
+| `merge commit d5290b1` author | `JamesZheng2026 <jameszheng2018@gmail.com>` | 执行合并动作的账号 |
+| `reviewDecision` | `""`（空） | 无 review 决策 |
+| 仓库 webhook | `[]` | 无外部 webhook 触发 |
+| `check_runs` | `[]` | 无 CI 触发 |
+
+**结论**：
+
+1. ✅ 未启用 auto-merge（`autoMergeRequest` 字段为 `null`）
+2. ✅ 无 webhook（`gh api repos/.../hooks` 返回 `[]`）
+3. ✅ 无 CI（`check_runs` 为空，仓库无 `.github/workflows`）
+4. ✅ 执行账号是真人 James（`is_bot=false`）
+5. ⚠️ **物理方式不可 100% 还原**：GitHub 时间线只能给 `mergedBy` 不能
+   区分"Web 按钮点击 / `gh pr merge --squash` / GitHub Desktop"。但因
+   上述三条均为空，可**排除** "auto-merge / webhook / Actions" 三种自动
+   路径。剩余三种**全在 James 物理控制下**。
+
+**修正后措辞**：PR #6 由 **James（真人账号）执行合并**，合并发生时
+`autoMergeRequest=null` 且无 webhook/CI → **无自动化触发器**。物理方式
+（Web / CLI / Desktop）需 James 自行确认（terminal history 或浏览器历史）。
+
+**教训**：今后 Hermes 群聊汇报涉及 GitHub 时间线时，**只报告可验证字段**
+（`mergedAt` / `mergedBy` / `autoMergeRequest` / `webhook` / `check_runs`），
+**不做"自动化"或"自动"归因**。
