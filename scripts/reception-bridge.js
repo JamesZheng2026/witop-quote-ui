@@ -78,8 +78,9 @@
 
   function getInquiryState(inquiryId) {
     if (!_store[inquiryId]) {
+      var seed = (window.MOCK_RECEPTION || []).find(function (r) { return r.id === inquiryId })
       _store[inquiryId] = {
-        businessState: window.RECEPTION_STATES ? window.RECEPTION_STATES.RECEPTION_OPEN : 'RECEPTION_OPEN',
+        businessState: toBusinessState(seed ? seed.receptionStatus : 'reception'),
         history: [],
         updatedAt: Date.now()
       }
@@ -89,6 +90,12 @@
 
   // 初始化时从 localStorage 恢复
   _store = loadFromStorage()
+
+  function updateReceptionStepper(uiState) {
+    document.querySelectorAll('.reception-stepper-item').forEach(function (item) {
+      item.setAttribute('data-stage-active', String(item.getAttribute('data-stage') === uiState))
+    })
+  }
 
   // ---- 4. 触发器 ----
   /**
@@ -126,9 +133,7 @@
     if (typeof window.renderReceptionWorkbench === 'function') {
       try { window.renderReceptionWorkbench() } catch (e) { console.warn('[reception-bridge] render failed:', e) }
     }
-    if (typeof window.updateReceptionStepper === 'function') {
-      try { window.updateReceptionStepper(toUiState(current.businessState)) } catch (e) { /* optional */ }
-    }
+    updateReceptionStepper(toUiState(current.businessState))
 
     return {
       ok: true,
@@ -165,6 +170,7 @@
     toUiState: toUiState,
     toBusinessState: toBusinessState,
     dispatchTrigger: dispatchTrigger,
+    updateStepper: updateReceptionStepper,
     getUiState: getUiState,
     getHistory: getHistory,
     listByUiState: listByUiState,

@@ -1880,15 +1880,27 @@ const MOCK_RECEPTION = [
   }
 ];
 
-// Filter helper for v3-01.
+// Mock supplies customer fields and initial states; bridge owns live statuses.
+function effectiveReceptionRecords() {
+  if (!window.ReceptionBridge) return MOCK_RECEPTION.slice();
+  return MOCK_RECEPTION.map(record => {
+    const receptionStatus = window.ReceptionBridge.getUiState(record.id);
+    return { ...record, receptionStatus, needsHandoff: receptionStatus === 'handoff',
+      handoffReason: receptionStatus === 'handoff' ? (record.handoffReason || 'Manual forward from reception list') : undefined,
+      handledBy: receptionStatus === 'handled' ? record.handledBy : undefined,
+      blockedReason: receptionStatus === 'blocked' ? record.blockedReason : undefined };
+  });
+}
+
 function receptionList(filterStatus) {
-  if (!filterStatus || filterStatus === 'all') return MOCK_RECEPTION.slice();
-  return MOCK_RECEPTION.filter(r => r.receptionStatus === filterStatus);
+  const records = effectiveReceptionRecords();
+  if (!filterStatus || filterStatus === 'all') return records;
+  return records.filter(r => r.receptionStatus === filterStatus);
 }
 
 function receptionCounts() {
   const counts = { reception: 0, handoff: 0, handled: 0, blocked: 0, total: 0 };
-  MOCK_RECEPTION.forEach(r => {
+  effectiveReceptionRecords().forEach(r => {
     counts[r.receptionStatus] = (counts[r.receptionStatus] || 0) + 1;
     counts.total++;
   });
@@ -2011,10 +2023,20 @@ function renderReceptionWorkbench() {
   const counter = document.getElementById('reception-count');
   if (empty) empty.hidden = rows.length > 0;
   if (counter) counter.textContent = '共 ' + counts.total + ' 条 — 当前 ' + receptionReceptionStatusLabel(receptionActiveTab) + ' ' + rows.length + ' 条';
+  if (window.ReceptionBridge) window.ReceptionBridge.updateStepper(receptionActiveTab);
+  if (receptionSelectedRecord) {
+    const selectedChannel = receptionActiveChannel;
+    openReceptionDetail(receptionSelectedRecord.id);
+    setReceptionChannel(selectedChannel);
+  }
 }
 
-// Action stubs (Mock — UI only, do not mutate persistence in v3-01).
+// Live actions use the bridge. Keep standalone V3-01 mock fallback if unloaded.
 function receptionForwardHandoff(id) {
+  if (!receptionList('all').some(r => r.id === id)) return;
+  if (window.ReceptionBridge) {
+    return window.ReceptionBridge.dispatchTrigger(id, 'transfer_to_human', { actor: 'ui-button', note: 'Manual forward from reception list' });
+  }
   const rec = MOCK_RECEPTION.find(r => r.id === id);
   if (!rec) return;
   rec.receptionStatus = 'handoff';
@@ -2024,6 +2046,11 @@ function receptionForwardHandoff(id) {
 }
 
 function receptionRevert(id) {
+  const record = receptionList('all').find(r => r.id === id);
+  if (!record) return;
+  if (window.ReceptionBridge) {
+    return window.ReceptionBridge.dispatchTrigger(id, record.receptionStatus === 'blocked' ? 'reopen' : 'cancel_transfer', { actor: 'ui-button', note: 'Restore reception from list' });
+  }
   const rec = MOCK_RECEPTION.find(r => r.id === id);
   if (!rec) return;
   rec.receptionStatus = 'reception';
@@ -2074,7 +2101,7 @@ function renderReceptionChannelBody(record, channel) {
 }
 
 function openReceptionDetail(id) {
-  const record = MOCK_RECEPTION.find(r => r.id === id);
+  const record = receptionList('all').find(r => r.id === id);
   if (!record) return;
   receptionSelectedRecord = record;
 
