@@ -1,0 +1,89 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs for the same PR/branch when a new commit is pushed.
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Shell + JS syntax + whitespace
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Shell script syntax (bash -n)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fail=0
+          for f in scripts/*.sh; do
+            echo "::group::bash -n $f"
+            if ! bash --noprofile --norc -n "$f"; then
+              echo "❌ bash syntax error in $f"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: Node script syntax (node --check)
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          fail=0
+          for f in scripts/*.js reports/*.cjs; do
+            [ -f "$f" ] || continue
+            echo "::group::node --check $f"
+            if ! node --check "$f"; then
+              echo "❌ node syntax error in $f"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: Git diff --check (whitespace + conflict markers)
+        run: |
+          # If this is a PR, compare against the merge base; otherwise check
+          # the working tree against HEAD.
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            git fetch origin "$base"
+            git diff --check "origin/$base"...HEAD
+          else
+            git diff --check HEAD
+          fi
+
+      - name: Install jsdom for reports/
+        # AGENTS.md mandates jsdom 30.1.2 installable via `npm install --prefix reports`.
+        # This is the only npm install in the whole workflow; everything else
+        # is zero-dependency. Cached across runs.
+        run: |
+          if [ ! -d reports/node_modules/jsdom ]; then
+            npm install --prefix reports --include=dev --no-audit --no-fund
+          fi
+          test -d reports/node_modules/jsdom || (echo "❌ jsdom not installed under reports/node_modules" && exit 1)
+
+      - name: Verify channel-preserve e2e (regression guard)
+        run: |
+          bash scripts/verify-channel-preserve.sh
+        # This e2e takes <30s on the existing test suite and acts as the
+        # primary regression guard for V3-05's channel-preserve fix. Keep it
+        # in lint.yml so every PR exercises the bug path before merge.
