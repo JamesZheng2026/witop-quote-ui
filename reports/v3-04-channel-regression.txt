@@ -1,0 +1,30 @@
+{
+  "buggy": {
+    "label": "buggy-4bb22a5",
+    "beforeWhatsappVisible": true,
+    "beforeEmailVisible": false,
+    "afterWhatsappVisible": false,
+    "afterEmailVisible": true,
+    "subtitle": "UK · 邮件 + WhatsApp ·  转人工"
+  },
+  "patched": {
+    "label": "patched-current",
+    "beforeWhatsappVisible": true,
+    "beforeEmailVisible": false,
+    "afterWhatsappVisible": true,
+    "afterEmailVisible": false,
+    "subtitle": "UK · 邮件 + WhatsApp ·  转人工"
+  }
+}
+
+[ Phase A — buggy reproduction ]
+  ✓ A1: before WhatsApp visible
+  ✓ A2: after WhatsApp hidden (bug reproduces)
+  ✓ A3: after email visible (regressed)
+
+[ Phase B — patched ]
+  ✓ B1: before WhatsApp visible
+  ✓ B2: after WhatsApp still visible (patch effective)
+  ✓ B3: subtitle contains 转人工
+
+=== Summary: PASS 6 / FAIL 0 ===

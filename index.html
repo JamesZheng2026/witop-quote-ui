@@ -2024,7 +2024,11 @@ function renderReceptionWorkbench() {
   if (empty) empty.hidden = rows.length > 0;
   if (counter) counter.textContent = '共 ' + counts.total + ' 条 — 当前 ' + receptionReceptionStatusLabel(receptionActiveTab) + ' ' + rows.length + ' 条';
   if (window.ReceptionBridge) window.ReceptionBridge.updateStepper(receptionActiveTab);
-  if (receptionSelectedRecord) openReceptionDetail(receptionSelectedRecord.id);
+  if (receptionSelectedRecord) {
+    const selectedChannel = receptionActiveChannel;
+    openReceptionDetail(receptionSelectedRecord.id);
+    setReceptionChannel(selectedChannel);
+  }
 }
 
 // Live actions use the bridge. Keep standalone V3-01 mock fallback if unloaded.
