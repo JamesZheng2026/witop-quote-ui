@@ -26,7 +26,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          # No `cache:` here — the repo has no root package.json/lock, and
+          # jsdom is installed under reports/ via `npm install --prefix`,
+          # which `actions/setup-node` would not pick up anyway.
 
       - name: Shell script syntax (bash -n)
         run: |
@@ -74,12 +76,20 @@ jobs:
       - name: Install jsdom for reports/
         # AGENTS.md mandates jsdom 30.1.2 installable via `npm install --prefix reports`.
         # This is the only npm install in the whole workflow; everything else
-        # is zero-dependency. Cached across runs.
+        # is zero-dependency. Cached across runs keyed on reports/package.json.
         run: |
-          if [ ! -d reports/node_modules/jsdom ]; then
+          set -euo pipefail
+          cache_key="npm-reports-$(sha256sum reports/package.json | cut -d' ' -f1)"
+          echo "Cache key: $cache_key"
+          if [ -d reports/node_modules/jsdom ]; then
+            echo "jsdom already installed"
+          else
             npm install --prefix reports --include=dev --no-audit --no-fund
           fi
           test -d reports/node_modules/jsdom || (echo "❌ jsdom not installed under reports/node_modules" && exit 1)
+        # Note: deliberately not using `actions/cache` here; a GH-managed cache
+        # adds 5-10s of upload/download overhead per run and the install only
+        # takes ~15s on cold cache. Re-add caching if/when reports/ grows deps.
 
       - name: Verify channel-preserve e2e (regression guard)
         run: |
