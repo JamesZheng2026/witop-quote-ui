@@ -63,14 +63,16 @@ jobs:
 
       - name: Git diff --check (whitespace + conflict markers)
         run: |
-          # If this is a PR, compare against the merge base; otherwise check
-          # the working tree against HEAD.
+          # Compare the PR's commits against the base. For push events, the
+          # base is HEAD~1; for PRs, the explicit base SHA from the event.
+          # `actions/checkout` was invoked with `fetch-depth: 0` so the
+          # full history is available.
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
-            git fetch origin "$base"
-            git diff --check "origin/$base"...HEAD
+            git diff --check "${base}...HEAD"
           else
-            git diff --check HEAD
+            # Push event: compare HEAD against its parent.
+            git diff --check HEAD~1...HEAD
           fi
 
       - name: Install jsdom for reports/
