@@ -25,7 +25,10 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # reports/package.json engines: ^22.22.2 || ^24.15.0 || >=26.0.0.
+          # Pin 22.x to match the local dev environment and avoid jsdom
+          # 30.1.2 + Node 20 webidl compat crash.
+          node-version: '22'
           # No `cache:` here — the repo has no root package.json/lock, and
           # jsdom is installed under reports/ via `npm install --prefix`,
           # which `actions/setup-node` would not pick up anyway.
