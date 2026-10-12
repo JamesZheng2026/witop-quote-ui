@@ -1,0 +1,71 @@
+
+[ 3.1 构造函数 & 基本行为 ]
+  ✓ 构造函数 default → RECEPTION_OPEN
+  ✓ getStateLabel() → 接待中
+  ✓ snapshot().state 正确
+  ✓ snapshot().label 正确
+  ✓ snapshot().availableTriggers 是数组
+  ✓ snapshot().history 是数组
+  ✓ snapshot().history[0].event === init
+
+[ 3.2 合法状态流转 ]
+  ✓ RECEPTION_OPEN → transfer_to_human → ok
+  ✓ 流转后状态 = TRANSFER_HUMAN
+  ✓ getState() 返回新状态
+  ✓ RECEPTION_OPEN → ai_block → ok
+  ✓ 流转后状态 = BLOCKED
+  ✓ TRANSFER_HUMAN → human_takeover → ok
+  ✓ 流转后状态 = HUMAN_TAKEOVER
+  ✓ TRANSFER_HUMAN → cancel_transfer → ok
+  ✓ 取消转人工回到 RECEPTION_OPEN
+  ✓ BLOCKED → reopen → ok
+  ✓ reopen 后状态 = RECEPTION_OPEN
+
+[ 3.3 非法流转 & 错误处理 ]
+  ✓ RECEPTION_OPEN 时 human_takeover → INVALID_TRANSITION
+  ✓ reason = INVALID_TRANSITION
+  ✓ 非法触发后状态不变
+  ✓ RECEPTION_OPEN 时 cancel_transfer → INVALID_TRANSITION
+  ✓ 非法触发后状态不变
+  ✓ HUMAN_TAKEOVER 时任意事件 → INVALID_TRANSITION
+  ✓ 非法触发后状态不变
+  ✓ BLOCKED 时 ai_block → ALREADY_IN_STATE（无该流转）
+  ✓ reason = INVALID_TRANSITION（未定义流转视为非法）
+
+[ 3.4 历史记录 ]
+  ✓ trigger() 成功时 history 增长 1 条
+  ✓ history 最后一条 event 正确
+  ✓ trigger() 返回 {ok:false} 时 history 不变
+  ✓ getHistory() 与 snapshot().history 引用一致
+
+[ 3.5 辅助方法 ]
+  ✓ RECEPTION_OPEN 时 canTrigger(transfer_to_human) = true
+  ✓ RECEPTION_OPEN 时 canTrigger(human_takeover) = false
+  ✓ getAvailableTriggers() 包含 transfer_to_human
+  ✓ getAvailableTriggers() 包含 ai_block
+  ✓ RECEPTION_OPEN 可用触发数 = 2
+  ✓ 显式传入初始状态生效
+
+[ 边界: TypeError & 历史截断 ]
+  ✓ 缺少 data 参数抛 TypeError
+  ✓ history 超过 50 条时自动截断到 50 条
+
+==================================================
+结果: 39 PASS / 0 FAIL
+
+[ Phase A: buggy 4bb22a5 ]
+PASS test_channel_persists_across_detail_refresh (expected regression reproduced)
+PASS test_channel_resets_on_detail_change
+PASS test_transfer_to_human_preserves_channel (expected regression reproduced)
+
+[ Phase B: patched b4a8040 ]
+PASS test_channel_persists_across_detail_refresh
+PASS test_channel_resets_on_detail_change
+PASS test_transfer_to_human_preserves_channel
+
+[ Current worktree ]
+PASS test_channel_persists_across_detail_refresh
+PASS test_channel_resets_on_detail_change
+PASS test_transfer_to_human_preserves_channel
+
+=== Summary: PASS 9 / FAIL 0 ===
