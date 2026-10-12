@@ -1,0 +1,320 @@
+$ node scripts/test-state.js
+
+[ 3.1 构造函数 & 基本行为 ]
+  ✓ 构造函数 default → RECEPTION_OPEN
+  ✓ getStateLabel() → 接待中
+  ✓ snapshot().state 正确
+  ✓ snapshot().label 正确
+  ✓ snapshot().availableTriggers 是数组
+  ✓ snapshot().history 是数组
+  ✓ snapshot().history[0].event === init
+
+[ 3.2 合法状态流转 ]
+  ✓ RECEPTION_OPEN → transfer_to_human → ok
+  ✓ 流转后状态 = TRANSFER_HUMAN
+  ✓ getState() 返回新状态
+  ✓ RECEPTION_OPEN → ai_block → ok
+  ✓ 流转后状态 = BLOCKED
+  ✓ TRANSFER_HUMAN → human_takeover → ok
+  ✓ 流转后状态 = HUMAN_TAKEOVER
+  ✓ TRANSFER_HUMAN → cancel_transfer → ok
+  ✓ 取消转人工回到 RECEPTION_OPEN
+  ✓ BLOCKED → reopen → ok
+  ✓ reopen 后状态 = RECEPTION_OPEN
+
+[ 3.3 非法流转 & 错误处理 ]
+  ✓ RECEPTION_OPEN 时 human_takeover → INVALID_TRANSITION
+  ✓ reason = INVALID_TRANSITION
+  ✓ 非法触发后状态不变
+  ✓ RECEPTION_OPEN 时 cancel_transfer → INVALID_TRANSITION
+  ✓ 非法触发后状态不变
+  ✓ HUMAN_TAKEOVER 时任意事件 → INVALID_TRANSITION
+  ✓ 非法触发后状态不变
+  ✓ BLOCKED 时 ai_block → ALREADY_IN_STATE（无该流转）
+  ✓ reason = INVALID_TRANSITION（未定义流转视为非法）
+
+[ 3.4 历史记录 ]
+  ✓ trigger() 成功时 history 增长 1 条
+  ✓ history 最后一条 event 正确
+  ✓ trigger() 返回 {ok:false} 时 history 不变
+  ✓ getHistory() 与 snapshot().history 引用一致
+
+[ 3.5 辅助方法 ]
+  ✓ RECEPTION_OPEN 时 canTrigger(transfer_to_human) = true
+  ✓ RECEPTION_OPEN 时 canTrigger(human_takeover) = false
+  ✓ getAvailableTriggers() 包含 transfer_to_human
+  ✓ getAvailableTriggers() 包含 ai_block
+  ✓ RECEPTION_OPEN 可用触发数 = 2
+  ✓ 显式传入初始状态生效
+
+[ 边界: TypeError & 历史截断 ]
+  ✓ 缺少 data 参数抛 TypeError
+  ✓ history 超过 50 条时自动截断到 50 条
+
+==================================================
+结果: 39 PASS / 0 FAIL
+
+Exit: 0
+
+$ bash scripts/verify-a2.sh
+=== A2 Validation ===
+Target: /Users/james/witop-quote-ui/.worktrees/t_2594ba6c/index.html
+Date: 2026-10-12T07:40:14.919Z
+Baseline: f6b793b (A1 script inspected read-only; no A1 code imported)
+PASS HTML/body structure pairs
+PASS All IDs unique (including new IDs)
+PASS All 81 new IDs contain no whitespace
+PASS All 39 new/changed buttons have type="button"
+PASS A1 Saudi Arabia ID preserved exactly
+WARN A1 legacy id="adj-Saudi Arabia" remains intentionally; see fix/html-issues-round1.
+WARN 4 unchanged baseline buttons lack type; A1 owns these.
+PASS Existing escHtml and intentBadge preserved
+WARN A1 legacy intentBadge uses innerHTML/string rendering; its separate hardening is not imported.
+PASS No new CDN dependencies
+PASS README untouched on this branch
+PASS No networking introduced in application script
+PASS Inquiry detail / quote / settings / quality DOM nodes exist
+PASS All inline scripts parse
+PASS window.aiQuoteEngine / quoteInquiry exported
+PASS window.quoteInquiry exported
+PASS Provider table has mock/rules/llm and four named adapters
+PASS STATUSES explicit seven states and transitionInquiry exported
+PASS All original MOCK_INQUIRIES fields/values preserved
+PASS Legacy Rejected migrated; historical totals preserved and flagged
+PASS 6 view DOM rendering/navigation smoke checks
+PASS List rows route to detail without generating a quote
+PASS Status history popover stops row navigation
+PASS Illegal transition throws, alerts and preserves status
+PASS Mock retains original qty/material/labor/logistics/margin totals
+PASS QuoteResult schema and arithmetic
+PASS Rules quotes SGS + LC compliance and region margin with reasons
+PASS Rules bulk tier / CE / margin clamp / risk flag
+PASS Missing LLM key rejects with exact error
+PASS llm returns mock + warning, without network
+PASS openai returns mock + warning, without network
+PASS anthropic returns mock + warning, without network
+PASS openrouter returns mock + warning, without network
+PASS minimax returns mock + warning, without network
+PASS Key settings memory-only persistence
+PASS Reload keeps provider but clears key
+PASS Missing key UI feedback leaves inquiry and history unchanged
+PASS Generate routes detail → quote, New → Reviewed → Quoting
+PASS Edit recalculates five parts and records history/activity
+PASS Invalid edit preserves prior quote and shows error
+PASS Approve transitions Quoting → Quoted and creates immutable record
+PASS Regeneration re-enters Quoting and preserves decision snapshot
+PASS Quoted → Negotiating → Won path is reachable
+PASS Closed Won inquiry cannot regenerate
+PASS Quote rejection reaches Lost with reason, activity and record
+PASS Reject requires non-empty reason
+PASS Pre-quote rejection logs Lost without fabricating quote record
+PASS Activities conform to ts/type/fromState/toState/actor/note
+PASS Four-dimensional scoring / risk deductions / grades / clamps
+PASS Quality expansion, averages and JSON download carry scores
+PASS Rendered new buttons and inline event handlers are valid
+PASS Activities, quote records and legacy migration survive reload once
+PASS git diff --check
+WARN Headless Chrome launch: status=null, signal=SIGABRT; no browser visual QA claimed.
+DOM harness views checked: 6/6 (not browser visual rendering).
+=== Summary ===
+PASS: 50
+FAIL: 0
+WARN: 4
+Report: /Users/james/witop-quote-ui/.worktrees/t_2594ba6c/reports/a2-validation.txt
+
+Exit: 0
+
+$ bash scripts/verify-v3-01.sh
+=== V3-01 Validation ===
+Target: /Users/james/witop-quote-ui/.worktrees/t_2594ba6c/index.html
+Date: 2026-10-12T07:40:15.069Z
+Parent branch: feat/v3-reception-workbench (HEAD 8c0af4b) — this branch: feat/v3-01-reception-skeleton
+PASS HTML/body/main structure pairs
+PASS All IDs unique
+PASS All 81 new IDs contain no whitespace
+WARN A1 legacy id="adj-Saudi Arabia" remains intentionally; v3-01 mirrors A2 to skip it from new-ID checks.
+PASS All 39 new/changed buttons have type="button"
+PASS Existing escHtml and intentBadge preserved
+PASS No new CDN dependencies
+PASS README untouched on this branch
+PASS No networking introduced in application script
+PASS A2 inquiry detail / quote / settings / quality DOM nodes still exist
+PASS All inline scripts parse
+PASS v3-01 reception DOM nodes exist (39 required)
+PASS window.aiQuoteEngine / quoteInquiry exported
+PASS window.quoteInquiry exported
+PASS Provider table has mock/rules/llm and four named adapters
+PASS STATUSES explicit seven states and transitionInquiry exported
+PASS All original MOCK_INQUIRIES fields/values preserved
+PASS Legacy Rejected migrated; historical totals preserved and flagged
+PASS A2 regression view "dashboard" still navigable
+PASS A2 regression view "inquiries" still navigable
+PASS A2 regression view "inquiry-detail" still navigable
+PASS A2 regression view "quote-panel" still navigable
+PASS A2 regression view "settings" still navigable
+PASS A2 regression view "quality-report" still navigable
+PASS A2 MOCK_INQUIRIES length 18 preserved
+PASS A2 INQ-001 company is Al Rashid Building Materials
+PASS A2 INQ-013 legacy Rejected migrated to Lost
+PASS A2 showView(report) routes to quality-report
+PASS A2 transitionInquiry rejects illegal transitions
+PASS A2 openInquiryDetail selects INQ-003 without quote
+PASS A2 getDefaultSettings has expected keys
+PASS A2 STATUS_COLORS covers all 7 statuses
+PASS A2 aiProviders has 7 entries
+PASS A2 escHtml escape preserves entities
+PASS v3-01 view-reception-workbench visible on showView
+PASS v3-01 only one view visible at a time (reception hides others)
+PASS v3-01 sidebar nav highlight switches to reception-workbench
+PASS v3-01 default tab is 接待中 (reception)
+PASS v3-01 MOCK_RECEPTION has 14 rows
+PASS v3-01 reception counts equal 5/3/3/3
+PASS v3-01 receptionList("reception") returns 5 rows
+PASS v3-01 receptionList("handoff") returns 3 rows
+PASS v3-01 receptionList("handled") returns 3 rows
+PASS v3-01 receptionList("blocked") returns 3 rows
+PASS v3-01 setReceptionTab toggles active class on tab buttons
+PASS v3-01 RECEPTION_STATUSES has exactly 4 segments
+PASS v3-01 RECEPTION_STATUS_LABELS contains all 5 small-vocabulary terms
+PASS v3-01 RECEPTION_REQUIREMENT_FIELDS has the 5 fields
+PASS v3-01 window exports include MOCK_RECEPTION and RECEPTION_STATUSES
+PASS v3-01 renderReceptionWorkbench populates table rows
+PASS v3-01 接待工作台 tab labels render visible to user
+PASS v3-01 (Mock) badge appears in drawer
+PASS v3-01 trigger rules drawer shows Mock 禁用 state
+PASS v3-01 trigger rules placeholder supports 禁用 / 保存中 / 规则数 0 states
+PASS v3-01 openReceptionDetail + closeReceptionDetail toggles drawer visibility
+PASS v3-01 missing fields in requirements show 待收集
+PASS v3-01 action button list has (Mock) labels
+PASS v3-01 channel panes email/whatsapp/backtrace all exist in DOM
+PASS v3-01 channel body text mentions AI 背调 keyword
+PASS v3-01 setReceptionChannel toggles visibility of pane
+PASS v3-01 status terminology in mock data covers all five required terms
+PASS v3-01 RECEPTION_STATUSES is exactly [reception,handoff,handled,blocked]
+PASS v3-01 receptionForwardHandoff + receptionRevert mutate and re-render
+PASS v3-01 empty tab renders placeholder
+PASS v3-01 candidate-4 placeholder band is present (versioning note)
+PASS v3-01 receptionRequirementLabel maps qty→采购数量, usage→用途, cycle→周期
+PASS v3-01 receptionChannelLabel renders email/whatsapp/mixed/unknown
+PASS v3-01 no network call introduced (fetch/WS/sendBeacon)
+PASS v3-01 git diff --check passes
+PASS v3-01 v3 source compiles — no inline script syntax error in V3-01 block
+PASS v3-01 reception tab styling uses active class for default tab
+PASS v3-01 view-reception-workbench has tab strip with 4 buttons
+PASS v3-01 mock data ids are REC-001..REC-014 with no duplicates
+PASS v3-01 each row exposes 查看详情 / 转人工 (when reception) / 恢复接待 (handoff/blocked) actions
+PASS v3-01 reception-detail drawer exports window.MOCK_RECEPTION count and labels
+PASS v3-01 channel labels render email/whatsapp text safely (no unescaped quotes)
+Original A2 views checked (regression): 6/6
+v3-01 views checked (new): 1/1
+WARN Headless Chrome launch: status=null, signal=SIGABRT; no browser visual QA claimed.
+=== Summary ===
+PASS: 75
+FAIL: 0
+WARN: 2
+Target (≥70 PASS / 0 FAIL — A2 regression 50 + v3-01 specific ≥20): MET ✓
+Report: /Users/james/witop-quote-ui/.worktrees/t_2594ba6c/reports/v3-01-validation.txt
+
+Exit: 0
+
+$ bash scripts/verify-v3-01b.sh
+=== V3-01b Validation (i18n + OKKI style) ===
+Target: /Users/james/witop-quote-ui/.worktrees/t_2594ba6c/index.html
+Date: 2026-10-12T07:40:15.222Z
+Base: feat/v3-02-state-machine @ f719f68
+PASS A1: 新增 stepper 容器 #reception-stepper
+PASS A2: 4 个 stepper 阶段 (data-stage)
+PASS A3: 顶部 4 阶段中文文案就位
+PASS A4: 顶部描述保留"四段看板"中文
+PASS A5: 状态徽章胶囊函数 getReceptionStatusBadge 已定义
+PASS A6: 状态标签中文映射完整
+PASS A7: inquiry-status popover 中文化
+PASS A8: v3 区域无明显英文标签残留
+PASS A9: A2 主侧栏英文保留 (按决策不破坏)
+PASS B1: stepper CSS 圆点 + 连接线已实现
+PASS B2: stat-card 圆角 8px (OKKI 风格)
+PASS B3: stat-card 今日增量次要文字就位
+PASS B4: 表格列增 归属人 + 概要
+PASS B5: 状态徽章胶囊样式 (圆角 + 边框)
+PASS B6: AI 概要卡片蓝色左边框
+PASS B7: 缺值"待收集"使用 italic
+PASS B8: 状态徽章在表格中被使用
+PASS C1: 主侧栏 v3 子项保留
+PASS C2: A2 关键 DOM 节点全部保留
+PASS C3: RECEPTION_STATUSES 枚举未改名
+PASS C4: state.js 状态机未引入变更
+PASS C5: 无新增 CDN 依赖
+PASS C6: state.js 单元测试仍通过
+  [累计] 继承 V3-01 75 PASS
+PASS C7: V3-01 验证脚本仍通过 (75 PASS / 0 FAIL)
+PASS C8: HTML 标签配对正确
+  [累计] 继承 A2 50 PASS
+PASS C9: A2 验证脚本 (verify-a2.sh) 仍通过
+  [累计] 继承 state.js 39 PASS
+PASS C10: state.js 单元测试 PASS 数
+
+=== V3-01b Summary ===
+PASS: 191
+FAIL: 0
+WARN: 0
+Target: >=85 PASS / 0 FAIL MET ✓
+Report: /Users/james/witop-quote-ui/.worktrees/t_2594ba6c/reports/v3-01b-validation.txt
+
+Exit: 0
+
+$ node reports/v3-02-e2e.js
+[ 1. 加载检查 ]
+  ✓ ReceptionStateMachine 挂到 window
+  ✓ RECEPTION_STATES.RECEPTION_OPEN === "RECEPTION_OPEN"
+  ✓ RECEPTION_STATES.HUMAN_TAKEOVER === "HUMAN_TAKEOVER"
+  ✓ ReceptionBridge 暴露
+  ✓ ReceptionBridge.dispatchTrigger 是函数
+[ 2. 业务 ↔ UI 映射 ]
+  ✓ RECEPTION_OPEN → reception
+  ✓ TRANSFER_HUMAN → handoff
+  ✓ HUMAN_TAKEOVER → handled
+  ✓ BLOCKED → blocked
+  ✓ reception → RECEPTION_OPEN
+[ V3-04 初始 seed ]
+  ✓ F2: 保留 seed 的 5/3/3/3 初始分布，总数 14
+[ 3. dispatchTrigger 写 store ]
+  ✓ transfer_to_human 成功
+  ✓ state = TRANSFER_HUMAN
+  ✓ uiState = handoff
+  ✓ history 有 2 条 (init + trigger)
+  ✓ history 最后一条 event = transfer_to_human
+  ✓ store 里有 REC-001
+  ✓ dispatchTrigger 返回 history 引用
+  ✓ F1: trigger 后 stepper 仅 handoff 激活
+  ✓ F2: bridge 改动同步列表和计数，seed 不变
+  ✓ F2: 详情读 bridge 的最新状态
+[ 4. F5 刷新恢复 ]
+  ✓ F5 后 REC-001.uiState = handoff
+  ✓ F5 后 history 恢复
+  ✓ F2: 完整重载后列表、徽章、计数和 stepper 从新状态恢复
+[ 5. 4 trigger 完整链路 ]
+  ✓ REC-002 transfer_to_human ok=true
+  ✓ REC-002 transfer_to_human → TRANSFER_HUMAN
+  ✓ REC-002 human_takeover ok=true
+  ✓ REC-002 human_takeover → HUMAN_TAKEOVER
+  ✓ REC-002 transfer_to_human ok=false
+  ✓ REC-002 reopen ok=false
+[ 6. 非法 transition 拒 ]
+  ✓ ai_block from RECEPTION_OPEN
+  ✓ transfer_to_human from BLOCKED 拒
+  ✓ reopen from BLOCKED
+[ 7. 未知 event 拒 ]
+  ✓ unknown event 拒
+[ 8. cancel_transfer 回退 ]
+  ✓ cancel_transfer → RECEPTION_OPEN
+[ V3-04 按钮与恢复 ]
+  ✓ F3: 真正 onclick 同步 store/storage/history/列表/已打开详情，seed 不变
+  ✓ F3: 恢复按钮走 cancel_transfer 并持久化和更新 stepper
+  ✓ F3: 初始 handoff seed 可合法恢复，不默认为 reception
+  ✓ F3: 初始 blocked seed 用 reopen 恢复，清除派生拦截状态
+  ✓ F3: 非法 UI 操作不回退直写 Mock，所有脚本无错误
+
+=========================================
+结果: 40 PASS / 0 FAIL
+
+Exit: 0
