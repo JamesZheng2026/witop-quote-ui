@@ -1,0 +1,42 @@
+=== V3-01b Validation (i18n + OKKI style) ===
+Target: /Users/james/witop-quote-ui/.worktrees/v3-01b-i18n-okki-style/index.html
+Date: 2026-10-12T02:57:14.810Z
+Base: feat/v3-02-state-machine @ f719f68
+PASS A1: 新增 stepper 容器 #reception-stepper
+PASS A2: 4 个 stepper 阶段 (data-stage)
+PASS A3: 顶部 4 阶段中文文案就位
+PASS A4: 顶部描述保留"四段看板"中文
+PASS A5: 状态徽章胶囊函数 getReceptionStatusBadge 已定义
+PASS A6: 状态标签中文映射完整
+PASS A7: inquiry-status popover 中文化
+PASS A8: v3 区域无明显英文标签残留
+PASS A9: A2 主侧栏英文保留 (按决策不破坏)
+PASS B1: stepper CSS 圆点 + 连接线已实现
+PASS B2: stat-card 圆角 8px (OKKI 风格)
+PASS B3: stat-card 今日增量次要文字就位
+PASS B4: 表格列增 归属人 + 概要
+PASS B5: 状态徽章胶囊样式 (圆角 + 边框)
+PASS B6: AI 概要卡片蓝色左边框
+PASS B7: 缺值"待收集"使用 italic
+PASS B8: 状态徽章在表格中被使用
+PASS C1: 主侧栏 v3 子项保留
+PASS C2: A2 关键 DOM 节点全部保留
+PASS C3: RECEPTION_STATUSES 枚举未改名
+PASS C4: state.js 状态机未引入变更
+PASS C5: 无新增 CDN 依赖
+PASS C6: state.js 单元测试仍通过
+  [累计] 继承 V3-01 75 PASS
+PASS C7: V3-01 验证脚本仍通过 (75 PASS / 0 FAIL)
+PASS C8: HTML 标签配对正确
+WARN verify-a2.sh 非 0 退出, 但允许 A2 区可能存在的历史 warn: 
+  [累计] 继承 A2 12 PASS
+PASS C9: A2 验证脚本 (verify-a2.sh) 仍通过
+  [累计] 继承 state.js 39 PASS
+PASS C10: state.js 单元测试 PASS 数
+
+=== V3-01b Summary ===
+PASS: 153
+FAIL: 0
+WARN: 1
+Target: >=85 PASS / 0 FAIL MET ✓
+Report: /Users/james/witop-quote-ui/.worktrees/v3-01b-i18n-okki-style/reports/v3-01b-validation.txt

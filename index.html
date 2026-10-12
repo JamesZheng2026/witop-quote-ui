@@ -65,7 +65,7 @@
     .panel-section { margin-bottom: 20px; }
     .panel-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 10px; }
     .chart-bar { border-radius: 4px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: white; min-width: 40px; transition: width 0.4s ease; }
-    .stat-card { padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; background: white; }
+    .stat-card { padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; background: white; }
     .dark .stat-card { background: #1e293b; border-color: #334155; }
     .no-select { user-select: none; }
     @media print {
@@ -77,6 +77,24 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    /* V3-01b: reception stepper (chevron, horizontal, OKKI-aligned) */
+    .reception-stepper { padding: 12px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; }
+    .dark .reception-stepper { background: #1e293b; border-color: #334155; }
+    .reception-stepper-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; align-items: center; }
+    .reception-stepper-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; text-align: center; }
+    .reception-stepper-item:not(:last-child)::after { content: ''; position: absolute; top: 14px; right: -50%; width: 100%; height: 2px; background: #e2e8f0; z-index: 0; }
+    .dark .reception-stepper-item:not(:last-child)::after { background: #334155; }
+    .reception-stepper-dot { width: 12px; height: 12px; border-radius: 9999px; background: #cbd5e1; border: 2px solid #fff; box-shadow: 0 0 0 1px #e2e8f0; z-index: 1; position: relative; }
+    .dark .reception-stepper-dot { background: #475569; border-color: #1e293b; box-shadow: 0 0 0 1px #334155; }
+    .reception-stepper-item[data-stage-active="true"] .reception-stepper-dot { background: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+    .dark .reception-stepper-item[data-stage-active="true"] .reception-stepper-dot { background: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+    .reception-stepper-item[data-stage-active="true"]::after { background: #2563eb; }
+    .dark .reception-stepper-item[data-stage-active="true"]::after { background: #3b82f6; }
+    .reception-stepper-label { font-size: 13px; font-weight: 600; color: #334155; }
+    .dark .reception-stepper-label { color: #e2e8f0; }
+    .reception-stepper-item[data-stage-active="true"] .reception-stepper-label { color: #2563eb; }
+    .reception-status-dot { width: 6px; height: 6px; border-radius: 9999px; display: inline-block; flex-shrink: 0; }
+    .reception-stepper-sub { font-size: 11px; color: #94a3b8; }
   </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex">
@@ -691,6 +709,32 @@
         </div>
       </div>
 
+      <!-- Stage stepper (V3-01b): 横向流程图, 4 阶段. 派生自 RECEPTION_STATUSES, 不改 JS 枚举 -->
+      <div class="reception-stepper mb-4" id="reception-stepper" data-v3="stepper" aria-label="接待阶段流程">
+        <ol class="reception-stepper-list" role="list">
+          <li class="reception-stepper-item" data-stage="reception" data-v3="stepper-item" data-stage-active="true">
+            <span class="reception-stepper-dot" aria-hidden="true"></span>
+            <span class="reception-stepper-label">询盘接入</span>
+            <span class="reception-stepper-sub" data-v3="stepper-sub">客户进入</span>
+          </li>
+          <li class="reception-stepper-item" data-stage="handoff" data-v3="stepper-item">
+            <span class="reception-stepper-dot" aria-hidden="true"></span>
+            <span class="reception-stepper-label">已接待</span>
+            <span class="reception-stepper-sub" data-v3="stepper-sub">AI 处理中</span>
+          </li>
+          <li class="reception-stepper-item" data-stage="handled" data-v3="stepper-item">
+            <span class="reception-stepper-dot" aria-hidden="true"></span>
+            <span class="reception-stepper-label">交付人工</span>
+            <span class="reception-stepper-sub" data-v3="stepper-sub">转交销售</span>
+          </li>
+          <li class="reception-stepper-item" data-stage="blocked" data-v3="stepper-item">
+            <span class="reception-stepper-dot" aria-hidden="true"></span>
+            <span class="reception-stepper-label">人工已接手</span>
+            <span class="reception-stepper-sub" data-v3="stepper-sub">销售跟进</span>
+          </li>
+        </ol>
+      </div>
+
       <!-- Tab switcher -->
       <div class="flex flex-wrap gap-2 mb-4 border-b border-slate-200 dark:border-slate-700 pb-2" id="reception-tabs" data-v3="tabs">
         <button type="button" class="tab-btn active" id="reception-tab-reception" data-v3="tab" data-tab="reception" onclick="setReceptionTab('reception')">接待中 <span class="ml-1 text-xs text-slate-400" id="reception-count-reception">(0)</span></button>
@@ -701,10 +745,10 @@
 
       <!-- Stats strip -->
       <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-4" id="reception-stat-strip" data-v3="stat-strip">
-        <div class="stat-card" data-v3="stat-card" data-tab="reception"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">接待中</div><div id="reception-stat-reception" class="text-2xl font-bold text-blue-600 dark:text-blue-400">0</div></div>
-        <div class="stat-card" data-v3="stat-card" data-tab="handoff"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">转人工</div><div id="reception-stat-handoff" class="text-2xl font-bold text-amber-600 dark:text-amber-400">0</div></div>
-        <div class="stat-card" data-v3="stat-card" data-tab="handled"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">人工已接手</div><div id="reception-stat-handled" class="text-2xl font-bold text-purple-600 dark:text-purple-400">0</div></div>
-        <div class="stat-card" data-v3="stat-card" data-tab="blocked"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">已拦截</div><div id="reception-stat-blocked" class="text-2xl font-bold text-slate-500 dark:text-slate-400">0</div></div>
+        <div class="stat-card" data-v3="stat-card" data-tab="reception"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">接待中</div><div id="reception-stat-reception" class="text-2xl font-bold text-blue-600 dark:text-blue-400">0</div><div class="text-xs text-blue-400 dark:text-blue-300 mt-1" id="reception-delta-reception" data-v3="stat-delta">+0 今日</div></div>
+        <div class="stat-card" data-v3="stat-card" data-tab="handoff"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">转人工</div><div id="reception-stat-handoff" class="text-2xl font-bold text-amber-600 dark:text-amber-400">0</div><div class="text-xs text-amber-400 dark:text-amber-300 mt-1" id="reception-delta-handoff" data-v3="stat-delta">+0 今日</div></div>
+        <div class="stat-card" data-v3="stat-card" data-tab="handled"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">人工已接手</div><div id="reception-stat-handled" class="text-2xl font-bold text-purple-600 dark:text-purple-400">0</div><div class="text-xs text-purple-400 dark:text-purple-300 mt-1" id="reception-delta-handled" data-v3="stat-delta">+0 今日</div></div>
+        <div class="stat-card" data-v3="stat-card" data-tab="blocked"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">已拦截</div><div id="reception-stat-blocked" class="text-2xl font-bold text-slate-500 dark:text-slate-400">0</div><div class="text-xs text-slate-400 mt-1" id="reception-delta-blocked" data-v3="stat-delta">+0 今日</div></div>
       </div>
 
       <div class="card overflow-hidden">
@@ -712,11 +756,12 @@
           <table class="data-table w-full" id="reception-table" data-v3="table">
             <thead>
               <tr>
-                <th>客户标识</th>
+                <th>客户 / 国家</th>
                 <th>来源</th>
+                <th>归属人</th>
                 <th>状态</th>
-                <th>最近沟通时间</th>
-                <th>采购数量</th>
+                <th>概要</th>
+                <th>最近沟通</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -742,7 +787,7 @@
 
     <!-- Top: Summary + Suggested actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-5" id="reception-drawer-top" data-v3="drawer-top">
-      <div class="card p-4" id="reception-summary-card" data-v3="summary">
+      <div class="card p-4 border-l-4 border-blue-500" id="reception-summary-card" data-v3="summary">
         <div class="panel-section-title">AI 概要</div>
         <p class="text-sm text-slate-700 dark:text-slate-200" id="reception-summary-text" data-v3="summary-text">Mock 概要</p>
         <div class="text-xs text-amber-600 dark:text-amber-400 mt-2" data-v3="summary-mock-badge">(Mock)</div>
@@ -792,7 +837,7 @@
   </div>
 
   <!-- TRIGGER RULES PLACEHOLDER DRAWER (v3-01, left-side, Mock disabled) -->
-  <div id="reception-trigger-drawer" popover class="hidden fixed top-0 left-56 h-full w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-xl overflow-auto z-40" data-v3="trigger-drawer">
+  <div id="reception-trigger-drawer" class="hidden fixed top-0 left-56 h-full w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-xl overflow-auto z-40" data-v3="trigger-drawer">
     <div class="p-4 border-b border-slate-200 dark:border-slate-700">
       <h2 class="text-sm font-bold text-slate-900 dark:text-white" data-v3="trigger-title">触发规则</h2>
       <p class="text-xs text-slate-500 mt-1" data-v3="trigger-subtitle">v3-01 占位 — 数据持久化将在 v4 接入</p>
@@ -812,7 +857,7 @@
   </div>
 
   <div id="inquiry-status-popover" popover class="hidden card p-5 fixed top-24 right-6 m-0 max-w-sm max-h-96 overflow-auto text-slate-800 dark:text-slate-100">
-    <div class="flex justify-between items-center gap-4 mb-3"><h2 class="panel-section-title mb-0">Status Transition History</h2><button type="button" class="btn btn-secondary btn-sm" onclick="closeStatusHistory()" aria-label="Close status history">Close</button></div>
+    <div class="flex justify-between items-center gap-4 mb-3"><h2 class="panel-section-title mb-0">状态流转记录</h2><button type="button" class="btn btn-secondary btn-sm" onclick="closeStatusHistory()" aria-label="关闭状态流转记录">关闭</button></div>
     <div id="inquiry-status-history"></div>
   </div>
 
@@ -1835,6 +1880,26 @@ function receptionStatusDotColor(s) {
   })[s] || '#64748b';
 }
 
+// V3-01b: 状态徽章胶囊 (OKKI 风格: 圆角 9999px + 浅底色)
+function getReceptionStatusBadge(status) {
+  const styles = {
+    reception: 'bg-blue-50 text-blue-700 border-blue-200',
+    handoff: 'bg-amber-50 text-amber-700 border-amber-200',
+    handled: 'bg-purple-50 text-purple-700 border-purple-200',
+    blocked: 'bg-red-50 text-red-700 border-red-200',
+    collected: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+  };
+  const labels = {
+    reception: '接待中', handoff: '转人工',
+    handled: '人工已接手', blocked: '已拦截',
+    collected: '关键信息已收集'
+  };
+  const cls = styles[status] || 'bg-slate-50 text-slate-600 border-slate-200';
+  const label = labels[status] || status;
+  return '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ' + cls + '" data-v3="status-badge" data-status="' + status + '">' +
+    '<span class="reception-status-dot" style="background:' + receptionStatusDotColor(status) + '"></span>' + label + '</span>';
+}
+
 // --- Tab + render state ---
 let receptionActiveTab = 'reception';
 let receptionActiveChannel = 'email';
@@ -1864,7 +1929,7 @@ function receptionRequirementLabel(field) {
 function receptionRequirementValue(record, field) {
   const v = record && record[field];
   if (v && String(v).trim() && v !== '—') return escHtml(v);
-  return '<span class="text-slate-400">(待收集)</span>';
+  return '<span class="text-slate-400 italic">待收集</span>';
 }
 
 function renderReceptionWorkbench() {
@@ -1883,7 +1948,7 @@ function renderReceptionWorkbench() {
   const rows = receptionList(receptionActiveTab);
   const tbody = document.getElementById('reception-table-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-400 text-sm">当前 Tab 没有客户</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 text-sm">当前 Tab 没有客户</td></tr>';
   } else {
     tbody.innerHTML = rows.map(r => `
       <tr data-record-id="${escHtml(r.id)}">
@@ -1892,9 +1957,10 @@ function renderReceptionWorkbench() {
           <div class="text-xs text-slate-500">${escHtml(r.id)}${r.country ? ' · ' + escHtml(r.country) : ''}</div>
         </td>
         <td>${receptionChannelLabel(r.channel)}</td>
-        <td><span class="status-dot" style="background:${receptionStatusDotColor(r.receptionStatus)}"></span> ${receptionReceptionStatusLabel(r.receptionStatus)}</td>
+        <td class="text-slate-600 dark:text-slate-300 text-xs">${r.assignee ? escHtml(r.assignee) : '<span class="text-slate-400">未分配</span>'}</td>
+        <td>${getReceptionStatusBadge(r.receptionStatus)}</td>
+        <td class="text-slate-600 dark:text-slate-300 text-xs" style="max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escHtml(r.summary || '')}">${r.summary ? escHtml(r.summary.slice(0, 36)) + (r.summary.length > 36 ? '…' : '') : '<span class="text-slate-400">—</span>'}</td>
         <td class="text-slate-500 text-xs">${escHtml(r.lastContactAt)}</td>
-        <td class="text-slate-700 dark:text-slate-200">${r.qty && r.qty !== '—' ? escHtml(r.qty) : '<span class="text-slate-400">待收集</span>'}</td>
         <td>
           <div class="flex flex-wrap gap-1">
             <button type="button" class="btn btn-secondary btn-sm" onclick="openReceptionDetail('${escHtml(r.id)}')">查看详情</button>
@@ -2036,7 +2102,7 @@ function closeReceptionDetail() {
 function openReceptionTriggerDrawer() {
   const drawer = document.getElementById('reception-trigger-drawer');
   drawer.classList.remove('hidden');
-  if (drawer.showPopover) drawer.showPopover();
+  // 注意: 不调用 showPopover() - 那会让浏览器接管为居中模态
   document.getElementById('reception-trigger-status').textContent = '禁用';
   document.getElementById('reception-trigger-saving').textContent = '空闲';
   document.getElementById('reception-trigger-rulecount').textContent = '0';
@@ -2062,6 +2128,38 @@ if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').match
 }
 
 init();
+</script>
+<script>
+// V3-01b Visual QA helper: ?view=reception-workbench&drawer=REC-001&trigger=1
+// 仅在 file:// + 包含 ?view= 时生效, 跑完即清. 不影响正常使用.
+(function() {
+  try {
+    var p = new URLSearchParams(location.search);
+    var view = p.get('view');
+    if (!view) return;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() { applyView(view, p); });
+    } else {
+      applyView(view, p);
+    }
+    function applyView(view, p) {
+      var nav = document.getElementById('nav-' + view);
+      if (nav) nav.click();
+      else document.querySelectorAll('.view').forEach(function(v) { v.classList.add('hidden'); });
+      var d = p.get('drawer');
+      if (d) {
+        var btn = document.querySelector('#reception-table-body button[onclick*="openReceptionDetail(\'' + d + '\')"]');
+        if (btn) setTimeout(function() { btn.click(); }, 200);
+      }
+      if (p.get('trigger') === '1') {
+        setTimeout(function() {
+          var tn = document.getElementById('nav-reception-triggers');
+          if (tn) tn.click();
+        }, 200);
+      }
+    }
+  } catch (e) { /* ignore */ }
+})();
 </script>
 </body>
 </html>
