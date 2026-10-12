@@ -1,0 +1,15 @@
+=== HTML 验证报告 ===
+目标: /Users/james/witop-quote-ui/index.html
+日期: 2026-10-10T08:24:06Z
+
+通过: 8
+失败: 0
+警告: 0
+
+[1] 按钮总数: 19, type=button: 19
+[2] adj- IDs: id="adj-Australia" id="adj-Saudi-Arabia" id="adj-UAE" id="adj-UK" id="adj-USA" 
+[3] intentBadge: 1 处 createElement, 32 处 textContent
+[4] escHtml 调用次数: 4
+[5] html/body 标签平衡: html=1/1, body=1/1
+[6] 重复 ID: 0
+0

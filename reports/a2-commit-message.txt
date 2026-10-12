@@ -1,0 +1,39 @@
+feat(ui): A2 inquiry detail + AI quote engine v2 (mock+rules+llm, abstractable)
+
+1. Inquiry detail: customer snapshot, product specs, quote timeline, processing
+   trail, quick actions and derived mock metadata; list rows open detail first.
+2. AI quote engine v2: inline window IIFE, Promise quoteInquiry API, mock/rules/
+   LLM placeholder providers, five reasoned cost items, risks and citations.
+3. Lifecycle: explicit New/Reviewed/Quoting/Quoted/Negotiating/Won/Lost states,
+   validated transitions, status-history popover and quote activity audit trail.
+4. Provider settings: extensible aiProviders routing including OpenAI, Anthropic,
+   OpenRouter and MiniMax; API key stays in memory and is excluded from storage.
+5. Quality report: four scoring dimensions, grades, deductions, average score,
+   immutable decision snapshots and downloadable scored JSON.
+6. Verification: scripts/verify-a2.sh extends A1 structural checks with local
+   runtime checks; reports/a2-validation.txt records 50 pass / 0 fail / 4 warn.
+
+Conservative interpretations:
+- LLM without an in-memory key throws 'API key not configured'; with a placeholder
+  key it returns mock + 'LLM provider not configured'. HTTP POST is a contract
+  placeholder only; no outbound request is made. Named routes report provider llm.
+- Mock retains original pricing and zero compliance; rules use mock assumptions
+  CE $150, SGS $200, LC $100, fire rating $150 and a 5% bulk tier at 5,000 sqm.
+  Custom formula has no configured expression, so fixed-rate fallback is flagged.
+- Each quality dimension contributes 0-25; risk terms deduct 5 per distinct match.
+  Grades: A>=90, B>=75, C>=60, otherwise D. Zero compliance loses completeness
+  per brief; old decisions without a snapshot lose completeness/price points.
+- Pre-quote reject goes to Lost with required reason and an activity/history item,
+  but does not fabricate a quote decision record. Revised approved/negotiating
+  quotes re-enter Quoting; Won/Lost are terminal. Imported Rejected maps to Lost.
+- Preserve original MOCK_INQUIRIES fields and historical amounts; inconsistent
+  legacy totals are flagged. New inquiry metadata is derived, only activities
+  are added at inquiry level; older transition history is marked unavailable.
+- Expand existing report as quality-report; showView('report') remains an alias.
+
+Known leftovers: adj-Saudi Arabia, unchanged untyped buttons and legacy
+intentBadge hardening belong to fix/html-issues-round1; no cherry-pick performed.
+Headless Chrome aborts with SIGABRT in this sandbox; six-view DOM harness passes,
+but browser visual QA is pending. No remote operation, README change, real
+credential, OKKI/database access or new CDN dependency. KB tool unavailable and
+Vault outside writable roots: provide the brief's Markdown handoff fallback.

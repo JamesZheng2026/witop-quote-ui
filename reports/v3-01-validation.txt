@@ -1,0 +1,89 @@
+=== V3-01 Validation ===
+Target: /Users/james/witop-quote-ui/.worktrees/v3-02-integration/index.html
+Date: 2026-10-12T06:33:06.330Z
+Parent branch: feat/v3-reception-workbench (HEAD 8c0af4b) — this branch: feat/v3-01-reception-skeleton
+PASS HTML/body/main structure pairs
+PASS All IDs unique
+PASS All 81 new IDs contain no whitespace
+WARN A1 legacy id="adj-Saudi Arabia" remains intentionally; v3-01 mirrors A2 to skip it from new-ID checks.
+PASS All 39 new/changed buttons have type="button"
+PASS Existing escHtml and intentBadge preserved
+PASS No new CDN dependencies
+PASS README untouched on this branch
+PASS No networking introduced in application script
+PASS A2 inquiry detail / quote / settings / quality DOM nodes still exist
+PASS All inline scripts parse
+PASS v3-01 reception DOM nodes exist (39 required)
+PASS window.aiQuoteEngine / quoteInquiry exported
+PASS window.quoteInquiry exported
+PASS Provider table has mock/rules/llm and four named adapters
+PASS STATUSES explicit seven states and transitionInquiry exported
+PASS All original MOCK_INQUIRIES fields/values preserved
+PASS Legacy Rejected migrated; historical totals preserved and flagged
+PASS A2 regression view "dashboard" still navigable
+PASS A2 regression view "inquiries" still navigable
+PASS A2 regression view "inquiry-detail" still navigable
+PASS A2 regression view "quote-panel" still navigable
+PASS A2 regression view "settings" still navigable
+PASS A2 regression view "quality-report" still navigable
+PASS A2 MOCK_INQUIRIES length 18 preserved
+PASS A2 INQ-001 company is Al Rashid Building Materials
+PASS A2 INQ-013 legacy Rejected migrated to Lost
+PASS A2 showView(report) routes to quality-report
+PASS A2 transitionInquiry rejects illegal transitions
+PASS A2 openInquiryDetail selects INQ-003 without quote
+PASS A2 getDefaultSettings has expected keys
+PASS A2 STATUS_COLORS covers all 7 statuses
+PASS A2 aiProviders has 7 entries
+PASS A2 escHtml escape preserves entities
+PASS v3-01 view-reception-workbench visible on showView
+PASS v3-01 only one view visible at a time (reception hides others)
+PASS v3-01 sidebar nav highlight switches to reception-workbench
+PASS v3-01 default tab is 接待中 (reception)
+PASS v3-01 MOCK_RECEPTION has 14 rows
+PASS v3-01 reception counts equal 5/3/3/3
+PASS v3-01 receptionList("reception") returns 5 rows
+PASS v3-01 receptionList("handoff") returns 3 rows
+PASS v3-01 receptionList("handled") returns 3 rows
+PASS v3-01 receptionList("blocked") returns 3 rows
+PASS v3-01 setReceptionTab toggles active class on tab buttons
+PASS v3-01 RECEPTION_STATUSES has exactly 4 segments
+PASS v3-01 RECEPTION_STATUS_LABELS contains all 5 small-vocabulary terms
+PASS v3-01 RECEPTION_REQUIREMENT_FIELDS has the 5 fields
+PASS v3-01 window exports include MOCK_RECEPTION and RECEPTION_STATUSES
+PASS v3-01 renderReceptionWorkbench populates table rows
+PASS v3-01 接待工作台 tab labels render visible to user
+PASS v3-01 (Mock) badge appears in drawer
+PASS v3-01 trigger rules drawer shows Mock 禁用 state
+PASS v3-01 trigger rules placeholder supports 禁用 / 保存中 / 规则数 0 states
+PASS v3-01 openReceptionDetail + closeReceptionDetail toggles drawer visibility
+PASS v3-01 missing fields in requirements show 待收集
+PASS v3-01 action button list has (Mock) labels
+PASS v3-01 channel panes email/whatsapp/backtrace all exist in DOM
+PASS v3-01 channel body text mentions AI 背调 keyword
+PASS v3-01 setReceptionChannel toggles visibility of pane
+PASS v3-01 status terminology in mock data covers all five required terms
+PASS v3-01 RECEPTION_STATUSES is exactly [reception,handoff,handled,blocked]
+PASS v3-01 receptionForwardHandoff + receptionRevert mutate and re-render
+PASS v3-01 empty tab renders placeholder
+PASS v3-01 candidate-4 placeholder band is present (versioning note)
+PASS v3-01 receptionRequirementLabel maps qty→采购数量, usage→用途, cycle→周期
+PASS v3-01 receptionChannelLabel renders email/whatsapp/mixed/unknown
+PASS v3-01 no network call introduced (fetch/WS/sendBeacon)
+PASS v3-01 git diff --check passes
+PASS v3-01 v3 source compiles — no inline script syntax error in V3-01 block
+PASS v3-01 reception tab styling uses active class for default tab
+PASS v3-01 view-reception-workbench has tab strip with 4 buttons
+PASS v3-01 mock data ids are REC-001..REC-014 with no duplicates
+PASS v3-01 each row exposes 查看详情 / 转人工 (when reception) / 恢复接待 (handoff/blocked) actions
+PASS v3-01 reception-detail drawer exports window.MOCK_RECEPTION count and labels
+PASS v3-01 channel labels render email/whatsapp text safely (no unescaped quotes)
+Original A2 views checked (regression): 6/6
+v3-01 views checked (new): 1/1
+WARN Headless Chrome launch: status=0, signal=none; no browser visual QA claimed.
+=== Summary ===
+PASS: 75
+FAIL: 0
+WARN: 2
+Target (≥70 PASS / 0 FAIL — A2 regression 50 + v3-01 specific ≥20): MET ✓
+Report: /Users/james/witop-quote-ui/.worktrees/v3-02-integration/reports/v3-01-validation.txt
