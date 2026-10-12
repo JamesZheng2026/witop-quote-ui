@@ -134,4 +134,9 @@ class ReceptionStateMachine {
   }
 }
 
-module.exports = { ReceptionStateMachine, STATES, EVENTS, LABELS }
+// UMD-lite: 同时支持 Node (测试) 和浏览器 (index.html 加载)
+;(function (root) {
+  var exp = { ReceptionStateMachine: ReceptionStateMachine, STATES: STATES, EVENTS: EVENTS, LABELS: LABELS }
+  if (typeof module !== 'undefined' && module.exports) module.exports = exp
+  else { root.ReceptionStateMachine = ReceptionStateMachine; root.RECEPTION_STATES = STATES; root.RECEPTION_EVENTS = EVENTS; root.RECEPTION_LABELS = LABELS }
+})(typeof window !== 'undefined' ? window : globalThis)

@@ -1,6 +1,6 @@
 === V3-01b Validation (i18n + OKKI style) ===
-Target: /Users/james/witop-quote-ui/index.html
-Date: 2026-10-12T03:08:19.096Z
+Target: /Users/james/witop-quote-ui/.worktrees/v3-02-integration/index.html
+Date: 2026-10-12T06:32:31.194Z
 Base: feat/v3-02-state-machine @ f719f68
 PASS A1: 新增 stepper 容器 #reception-stepper
 PASS A2: 4 个 stepper 阶段 (data-stage)
@@ -38,4 +38,4 @@ PASS: 191
 FAIL: 0
 WARN: 0
 Target: >=85 PASS / 0 FAIL MET ✓
-Report: /Users/james/witop-quote-ui/reports/v3-01b-validation.txt
+Report: /Users/james/witop-quote-ui/.worktrees/v3-02-integration/reports/v3-01b-validation.txt
