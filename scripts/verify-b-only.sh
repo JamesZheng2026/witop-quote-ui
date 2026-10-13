@@ -27,8 +27,9 @@ try {
   assert.equal(dashboard.querySelector('h1').textContent, '接待工作台');
   assert(!b.classList.contains('hidden') && b.children.length > 0, 'Visible workbench');
   assert.equal(b.querySelectorAll('thead th').length, 8, 'Eight columns');
-  assert(b.textContent.includes('三方质检：销售自评 · 技术复核 · AI质检'));
-  assert(!b.textContent.includes('品控终审'), 'Confirmed third-stage name');
+  assert(b.textContent.includes('三方质检：销售自评 · 技术复核 · AI 质检 · 品控终审'),
+    'QC parties label per James D1 final spec (third-stage)');
+  assert(b.textContent.includes('AI 质检 · 品控终审'), 'Third-stage label per D1');
   assert.equal(b.querySelectorAll('.grid > div').length, 4, 'Four cards');
   const records = w.MOCK_RECEPTION;
   assert.deepEqual([...new Set(records.map(r => r.qcStatus))].sort(),
