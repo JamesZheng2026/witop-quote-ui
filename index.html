@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Witop Decor — AI Quote Processing</title>
+  <title>维特普装饰 · 接待工作台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script>
@@ -105,27 +105,27 @@
   <!-- ===== SIDEBAR ===== -->
   <aside class="w-56 bg-sidebar text-white flex flex-col flex-shrink-0 no-print" style="min-height:100vh">
     <div class="p-5 border-b border-slate-700">
-      <div class="text-sm font-bold tracking-wide">WITOP DECOR</div>
-      <div class="text-xs text-slate-400 mt-0.5">AI Quote Processing</div>
+      <div class="text-sm font-bold tracking-wide">维特普装饰 WITOP DECOR</div>
+      <div class="text-xs text-slate-400 mt-0.5">接待工作台 · 三方质检</div>
     </div>
     <nav class="flex-1 py-4">
       <div class="sidebar-item active px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('dashboard')" id="nav-dashboard">
-        <i class="fas fa-chart-pie w-4 text-slate-400"></i> Dashboard
+        <i class="fas fa-chart-pie w-4 text-slate-400"></i> 接待工作台
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiries')" id="nav-inquiries">
-        <i class="fas fa-inbox w-4 text-slate-400"></i> Inquiries
+        <i class="fas fa-inbox w-4 text-slate-400"></i> 询盘列表
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiry-detail')" id="nav-inquiry-detail">
-        <i class="fas fa-file-lines w-4 text-slate-400"></i> Inquiry Detail
+        <i class="fas fa-file-lines w-4 text-slate-400"></i> 询盘详情
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quote-panel')" id="nav-quote-panel">
-        <i class="fas fa-calculator w-4 text-slate-400"></i> Quote Panel
+        <i class="fas fa-calculator w-4 text-slate-400"></i> AI 报价
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('settings')" id="nav-settings">
-        <i class="fas fa-cog w-4 text-slate-400"></i> AI Settings
+        <i class="fas fa-cog w-4 text-slate-400"></i> AI 设置
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quality-report')" id="nav-quality-report">
-        <i class="fas fa-clipboard-check w-4 text-slate-400"></i> Quality Report
+        <i class="fas fa-clipboard-check w-4 text-slate-400"></i> 质检报告
       </div>
       <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('reception-workbench')" id="nav-reception-workbench" data-v3="reception-nav">
         <i class="fas fa-headset w-4 text-slate-400"></i> 接待工作台
@@ -141,76 +141,74 @@
   </aside>
 
   <!-- ===== MAIN CONTENT ===== -->
-  <main class="flex-1 overflow-auto min-w-0">
+  <main class="flex-1 overflow-auto min-w-0 dark" style="background:#0F172A">
     <div id="ui-error" role="alert" class="hidden m-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"></div>
 
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="view p-6">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">接待工作台</h1>
-        <p class="text-sm text-slate-500 mt-0.5">OKKI 四段看板 · 三方质检 · 实时接待状态</p>
+        <h1 class="text-xl font-bold text-white">接待工作台</h1>
+        <p class="text-sm text-slate-400 mt-0.5">OKKI 四段看板 · 三方质检 · 实时接待状态</p>
       </div>
 
       <div id="witop-abc-host"></div>
 
-      <section id="variant-a" class="hidden"></section>
       <section id="variant-b" class="hidden"></section>
-      <section id="variant-c" class="hidden"></section>
     </div>
 
     <!-- INQUIRIES VIEW -->
     <div id="view-inquiries" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Inquiry List</h1>
-        <p class="text-sm text-slate-500 mt-0.5">All inquiries — click a row to open Inquiry Detail</p>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">询盘列表</h1>
+        <p class="text-sm text-slate-500 mt-0.5">全部询盘 · 点击行查看详情</p>
       </div>
 
       <div class="flex flex-wrap gap-3 items-end mb-4">
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Search</label>
-          <input type="text" class="input-field" placeholder="Company, country, product..." id="inq-search" oninput="renderInquiries()">
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">搜索</label>
+          <input type="text" class="input-field" placeholder="公司、国家、产品..." id="inq-search" oninput="renderInquiries()">
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Status</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">状态</label>
           <select class="input-field" id="inq-status" onchange="renderInquiries()">
-            <option value="">All</option>
-            <option value="New">New</option>
-            <option value="Reviewed">Reviewed</option>
-            <option value="Quoting">Quoting</option>
-            <option value="Quoted">Quoted</option>
-            <option value="Negotiating">Negotiating</option>
-            <option value="Won">Won</option>
-            <option value="Lost">Lost</option>
+            <option value="">全部</option>
+            <option value="New">新询盘</option>
+            <option value="Reviewed">已审核</option>
+            <option value="Quoting">报价中</option>
+            <option value="Quoted">已报价</option>
+            <option value="Negotiating">议价中</option>
+            <option value="Won">已成交</option>
+            <option value="Lost">已流失</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Intent</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">意向</label>
           <select class="input-field" id="inq-intent" onchange="renderInquiries()">
-            <option value="">All</option>
-            <option value="Cold">Cold</option>
-            <option value="Warm">Warm</option>
-            <option value="Hot">Hot</option>
-            <option value="High Intent">High Intent</option>
+            <option value="">全部</option>
+            <option value="Cold">冷</option>
+            <option value="Warm">温</option>
+            <option value="Hot">热</option>
+            <option value="High Intent">高意向</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Product</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">产品</label>
           <select class="input-field" id="inq-product" onchange="renderInquiries()">
-            <option value="">All</option>
-            <option value="WPC Wall Panel">WPC Wall Panel</option>
-            <option value="SPC Flooring">SPC Flooring</option>
-            <option value="UV Panel">UV Panel</option>
-            <option value="WPC Ceiling">WPC Ceiling</option>
+            <option value="">全部</option>
+            <option value="WPC Wall Panel">WPC 墙板</option>
+            <option value="SPC Flooring">SPC 地板</option>
+            <option value="UV Panel">UV 板</option>
+            <option value="WPC Ceiling">WPC 天花</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Sort By</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">排序</label>
           <select class="input-field" id="inq-sort" onchange="renderInquiries()">
-            <option value="date-desc">Date ↓</option>
-            <option value="date-asc">Date ↑</option>
-            <option value="amount-desc">Amount ↓</option>
-            <option value="amount-asc">Amount ↑</option>
-            <option value="company-asc">Company A-Z</option>
+            <option value="date-desc">日期 ↓</option>
+            <option value="date-asc">日期 ↑</option>
+            <option value="amount-desc">金额 ↓</option>
+            <option value="amount-asc">金额 ↑</option>
+            <option value="company-asc">公司 A-Z</option>
           </select>
         </div>
       </div>
@@ -220,14 +218,14 @@
           <table class="data-table w-full">
             <thead>
               <tr>
-                <th class="cursor-pointer" onclick="sortInquiries('id')">ID <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('company')">Company <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('country')">Country <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('product')">Product <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('intent')">Intent <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('status')">Status <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('date')">Date <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('amount')">AI Quote <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('id')">编号 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('company')">公司 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('country')">国家 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('product')">产品 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('intent')">意向 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('status')">状态 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('date')">日期 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('amount')">AI 报价 <i class="fas fa-sort text-xs text-slate-300"></i></th>
               </tr>
             </thead>
             <tbody id="inq-table-body"></tbody>
@@ -240,28 +238,30 @@
     <!-- INQUIRY DETAIL VIEW -->
     <div id="view-inquiry-detail" class="view p-6 hidden">
       <div id="detail-empty" class="card p-10 text-center text-slate-500 dark:text-slate-400">
-        Select an inquiry to see its details.
-        <button type="button" class="btn btn-secondary mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+        请从左侧选择一个询盘查看详情。
+        <button type="button" class="btn btn-secondary mt-3" onclick="showView('inquiries')">查看询盘列表</button>
       </div>
       <div id="detail-content" class="hidden">
         <div id="detail-header" class="mb-6"></div>
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div class="xl:col-span-2 space-y-4">
-            <div class="card p-5"><h2 class="panel-section-title">Customer Snapshot</h2><div id="detail-customer" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div>
-            <div class="card p-5"><h2 class="panel-section-title">Product Specifications</h2><div id="detail-specs" class="grid grid-cols-2 gap-3 text-sm"></div></div>
-            <div class="card p-5" id="detail-history-card"><h2 class="panel-section-title">Quote History Timeline</h2><div id="detail-quote-history"></div></div>
-            <div class="card p-5"><h2 class="panel-section-title">AI Processing Trail</h2><div id="detail-current-state" class="mb-3 text-sm font-semibold"></div><div id="detail-activities"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">客户档案</h2><div id="detail-customer" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">产品规格</h2><div id="detail-specs" class="grid grid-cols-2 gap-3 text-sm"></div></div>
+            <div class="card p-5" id="detail-history-card"><h2 class="panel-section-title">报价历史时间轴</h2><div id="detail-quote-history"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">AI 处理轨迹</h2><div id="detail-current-state" class="mb-3 text-sm font-semibold"></div><div id="detail-activities"></div></div>
           </div>
           <div class="space-y-4">
-            <div class="card p-5"><h2 class="panel-section-title">Quick Actions</h2><div id="detail-actions" class="flex flex-col items-start gap-3"></div>
+            <div class="card p-5">
+              <h2 class="panel-section-title">快捷操作</h2>
+              <div id="detail-actions" class="flex flex-col items-start gap-3"></div>
               <div id="detail-reject-form" class="hidden mt-4">
-                <label for="detail-reject-reason" class="block text-sm mb-2">Rejection reason</label>
-                <textarea id="detail-reject-reason" class="input-field" rows="3" placeholder="Enter a reason..."></textarea>
-                <button type="button" class="btn btn-danger btn-sm mt-2" onclick="confirmDetailReject()">Confirm Rejection</button>
-                <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="cancelDetailReject()">Cancel</button>
+                <label for="detail-reject-reason" class="block text-sm mb-2">拒绝理由</label>
+                <textarea id="detail-reject-reason" class="input-field" rows="3" placeholder="请填写拒绝理由..."></textarea>
+                <button type="button" class="btn btn-danger btn-sm mt-2" onclick="confirmDetailReject()">确认拒绝</button>
+                <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="cancelDetailReject()">取消</button>
               </div>
             </div>
-            <div class="card p-5"><h2 class="panel-section-title">Metadata</h2><div id="detail-metadata" class="space-y-3 text-sm"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">元信息</h2><div id="detail-metadata" class="space-y-3 text-sm"></div></div>
           </div>
         </div>
       </div>
@@ -270,8 +270,8 @@
     <!-- QUOTE PANEL VIEW -->
     <div id="view-quote-panel" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI Quote Processing</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Select an inquiry from the list or click a row above</p>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI 报价</h1>
+        <p class="text-sm text-slate-500 mt-0.5">从询盘列表选择或点击上方的询盘条目</p>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -281,59 +281,59 @@
           <div id="qp-empty" class="card p-10 text-center">
             <i class="fas fa-inbox text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
             <div class="text-slate-500 dark:text-slate-400 text-sm">Select an inquiry to begin quoting</div>
-            <button type="button" class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+            <button type="button" class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">查看询盘列表</button>
           </div>
 
           <!-- Buyer Info (shown when inquiry selected) -->
           <div id="qp-buyer" class="hidden">
             <div class="card p-5">
-              <div class="panel-section-title">Buyer Information</div>
+              <div class="panel-section-title">客户信息</div>
               <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Company</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-company">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Country</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-country">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Contact</span><div class="text-slate-700 dark:text-slate-200" id="qp-contact">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Email</span><div class="text-slate-700 dark:text-slate-200" id="qp-email">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Import History</span><div class="text-slate-700 dark:text-slate-200" id="qp-history">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Intent Level</span><div class="mt-0.5" id="qp-intent-badge"></div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">公司</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-company">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">国家</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-country">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">联系人</span><div class="text-slate-700 dark:text-slate-200" id="qp-contact">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">邮箱</span><div class="text-slate-700 dark:text-slate-200" id="qp-email">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">进口历史</span><div class="text-slate-700 dark:text-slate-200" id="qp-history">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">意向等级</span><div class="mt-0.5" id="qp-intent-badge"></div></div>
               </div>
             </div>
 
             <div class="card p-5">
-              <div class="panel-section-title">Product Details &amp; Suggested Specs</div>
+              <div class="panel-section-title">产品详情与建议规格</div>
               <div class="space-y-2.5 text-sm">
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Product</span>
+                  <span class="text-slate-500 dark:text-slate-400">产品</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-product">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Quantity</span>
+                  <span class="text-slate-500 dark:text-slate-400">数量</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-qty">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Thickness</span>
+                  <span class="text-slate-500 dark:text-slate-400">厚度</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-thickness">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Width</span>
+                  <span class="text-slate-500 dark:text-slate-400">宽度</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-width">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Length</span>
+                  <span class="text-slate-500 dark:text-slate-400">长度</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-length">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Surface</span>
+                  <span class="text-slate-500 dark:text-slate-400">表面</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-surface">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Color/Finish</span>
+                  <span class="text-slate-500 dark:text-slate-400">花色</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-color">—</span>
                 </div>
               </div>
 
               <!-- Notes from buyer -->
               <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-                <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1.5">Buyer Notes</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1.5">买家备注</div>
                 <div class="text-sm text-slate-600 dark:text-slate-300 italic" id="qp-notes">—</div>
               </div>
             </div>
@@ -346,76 +346,76 @@
             <!-- AI Quote Breakdown -->
             <div class="card p-5">
               <div class="flex justify-between items-center mb-4">
-                <div class="panel-section-title mb-0">AI-Generated Quote</div>
+                <div class="panel-section-title mb-0">AI 生成报价</div>
                 <div class="flex gap-2">
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> Regenerate</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> Print</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> 重新生成</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> 打印</button>
                 </div>
               </div>
 
               <div id="q-breakdown" class="space-y-2 mb-4"></div>
-              <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2"><span id="q-subtotal">$0</span><span>Subtotal</span></div>
-              <div class="flex justify-between text-sm font-bold mt-3"><span id="q-total" class="text-indigo-600 dark:text-indigo-400 text-lg">$0</span><span>Total (FOB)</span></div>
-              <div class="flex justify-between text-sm mt-2 mb-4"><span id="q-unitprice">$0</span><span>USD/sqm</span></div>
+              <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2"><span id="q-subtotal">$0</span><span>小计</span></div>
+              <div class="flex justify-between text-sm font-bold mt-3"><span id="q-total" class="text-indigo-600 dark:text-indigo-400 text-lg">$0</span><span>合计（FOB）</span></div>
+              <div class="flex justify-between text-sm mt-2 mb-4"><span id="q-unitprice">$0</span><span>美元/平方米</span></div>
               <div id="q-warnings" class="text-sm text-amber-700 dark:text-amber-300 mb-3" role="status"></div>
 
               <!-- Edit Mode -->
               <div id="q-edit-area" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 mb-4">
-                <div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-3 uppercase tracking-wide">Edit Quote Values</div>
+                <div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-3 uppercase tracking-wide">编辑报价</div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Material Cost ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">材料成本（$）</label>
                     <input type="number" class="input-field" id="edit-matcost" value="0">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Craft / Labor Cost ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">工艺/人工（$）</label>
                     <input type="number" class="input-field" id="edit-labcost" value="0">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Logistics ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">物流（$）</label>
                     <input type="number" class="input-field" id="edit-logistics" value="0">
                   </div>
                   <div>
-                    <label for="edit-compliance" class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Compliance ($)</label>
+                    <label for="edit-compliance" class="text-xs text-slate-500 dark:text-slate-400 block mb-1">合规（$）</label>
                     <input type="number" class="input-field" id="edit-compliance" value="0" min="0" step="0.01">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Margin %</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">利润率 %</label>
                     <input type="number" class="input-field" id="edit-marginpct" value="20">
                   </div>
                 </div>
                 <div class="mt-3 flex gap-2">
-                  <button type="button" class="btn btn-primary btn-sm" onclick="applyEdit()">Apply</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="applyEdit()">应用</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">取消</button>
                 </div>
               </div>
 
               <!-- Actions -->
               <div class="flex gap-2 flex-wrap" id="q-actions">
-                <button type="button" class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
-                <button type="button" class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
-                <button type="button" class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>
+                <button type="button" class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> 通过报价</button>
+                <button type="button" class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> 拒绝</button>
+                <button type="button" class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> 编辑</button>
               </div>
 
               <!-- Reject Form -->
               <div id="q-reject-form" class="hidden mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
-                <div class="text-xs font-bold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">Rejection Reason</div>
-                <textarea class="input-field mb-3" rows="3" placeholder="Enter reason for rejection..." id="reject-reason"></textarea>
+                <div class="text-xs font-bold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">拒绝理由</div>
+                <textarea class="input-field mb-3" rows="3" placeholder="请填写拒绝理由..." id="reject-reason"></textarea>
                 <div class="flex gap-2">
-                  <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject()">Confirm Rejection</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelReject()">Cancel</button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject()">确认拒绝</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelReject()">取消</button>
                 </div>
               </div>
 
               <div class="mt-3 text-xs text-slate-400 dark:text-slate-500" id="q-meta"></div>
             </div>
 
-            <div class="card p-5 mt-4"><div class="panel-section-title">Risk Flags</div><div id="q-risk-flags" class="text-sm text-red-600 dark:text-red-400"></div></div>
-            <div class="card p-5 mt-4"><div class="panel-section-title">Citations</div><div id="q-citations" class="text-sm text-green-600 dark:text-green-400"></div></div>
+            <div class="card p-5 mt-4"><div class="panel-section-title">风险标记</div><div id="q-risk-flags" class="text-sm text-red-600 dark:text-red-400"></div></div>
+            <div class="card p-5 mt-4"><div class="panel-section-title">引用来源</div><div id="q-citations" class="text-sm text-green-600 dark:text-green-400"></div></div>
 
             <!-- Quote History -->
             <div class="card p-5" id="q-history-card">
-              <div class="panel-section-title">Quote History</div>
+              <div class="panel-section-title">报价历史</div>
               <div id="q-history-list"></div>
             </div>
           </div>
@@ -426,76 +426,76 @@
     <!-- AI SETTINGS VIEW -->
     <div id="view-settings" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI Quote Settings</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Configure parameters that drive AI quote generation</p>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI 报价设置</h1>
+        <p class="text-sm text-slate-500 mt-0.5">配置驱动 AI 报价生成的参数</p>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div class="card p-5">
-          <div class="panel-section-title">Pricing Rules</div>
+          <div class="panel-section-title">定价规则</div>
           <div class="space-y-4">
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Default Margin %</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">默认利润率 %</label>
               <input type="number" class="input-field" id="s-margin" value="20" min="0" max="100">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Material Pricing Rule</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">材料定价方式</label>
               <select class="input-field" id="s-mat-rule">
-                <option value="fixed">Fixed per sqm</option>
-                <option value="tiered">Tiered by quantity</option>
-                <option value="formula">Custom formula</option>
+                <option value="fixed">按平方米固定</option>
+                <option value="tiered">按数量分档</option>
+                <option value="formula">自定义公式</option>
               </select>
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Material Cost Base (USD/sqm)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">材料基准成本（美元/平方米）</label>
               <input type="number" class="input-field" id="s-mat-cost" value="12.50" step="0.01" min="0">
             </div>
           </div>
         </div>
 
         <div class="card p-5">
-          <div class="panel-section-title">Labor &amp; Logistics</div>
+          <div class="panel-section-title">人工与物流</div>
           <div class="space-y-4">
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Labor Rate (USD/sqm)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">人工费率（美元/平方米）</label>
               <input type="number" class="input-field" id="s-labor" value="3.00" step="0.01" min="0">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Logistics Base (USD/container)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">物流基准（美元/柜）</label>
               <input type="number" class="input-field" id="s-logistics-base" value="3500" step="100" min="0">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Container Size (sqm)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">单柜装载（平方米）</label>
               <input type="number" class="input-field" id="s-container-sqm" value="700" step="10" min="0">
             </div>
           </div>
         </div>
 
         <div class="card p-5">
-          <div class="panel-section-title">Region Adjustments</div>
+          <div class="panel-section-title">区域调整</div>
           <div class="space-y-2.5">
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">UAE</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">阿联酋</span>
               <input type="number" class="input-field flex-1" id="adj-UAE" value="0" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">Saudi Arabia</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">沙特</span>
               <input type="number" class="input-field flex-1" id="adj-Saudi Arabia" value="0" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">USA</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">美国</span>
               <input type="number" class="input-field flex-1" id="adj-USA" value="5" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">UK</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">英国</span>
               <input type="number" class="input-field flex-1" id="adj-UK" value="5" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">Australia</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">澳大利亚</span>
               <input type="number" class="input-field flex-1" id="adj-Australia" value="5" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
@@ -503,12 +503,12 @@
         </div>
 
         <div class="card p-5">
-          <div class="panel-section-title">AI Model &amp; Behavior</div>
+          <div class="panel-section-title">AI 模型与行为</div>
           <div class="space-y-4">
-            <div><label for="s-ai-provider" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Provider</label><select id="s-ai-provider" class="input-field"></select></div>
-            <div><label for="s-ai-api-key" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">API Key (memory only)</label><input id="s-ai-api-key" type="password" class="input-field" autocomplete="off" placeholder="This key stays in memory only"><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">LLM routes are placeholders. Use a placeholder value for this demo.</p></div>
+            <div><label for="s-ai-provider" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI 提供方</label><select id="s-ai-provider" class="input-field"></select></div>
+            <div><label for="s-ai-api-key" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">API Key（仅内存）</label><input id="s-ai-api-key" type="password" class="input-field" autocomplete="off" placeholder="此 Key 仅保存在内存中"><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">LLM 路由为占位实现，演示阶段请填写占位值。</p></div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Model</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI 模型</label>
               <select class="input-field" id="s-ai-model">
                 <option value="gpt-4o">GPT-4o</option>
                 <option value="claude-sonnet">Claude Sonnet</option>
@@ -517,16 +517,16 @@
               </select>
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Confidence Threshold</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">置信度阈值</label>
               <input type="number" class="input-field" id="s-confidence" value="0.7" step="0.05" min="0" max="1">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Auto-Quote Threshold</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">自动报价阈值</label>
               <select class="input-field" id="s-auto-quote">
-                <option value="high">High Intent only</option>
-                <option value="hot">Hot &amp; High Intent</option>
-                <option value="all">All reviewed inquiries</option>
-                <option value="none">Manual only</option>
+                <option value="high">仅高意向</option>
+                <option value="hot">热询+高意向</option>
+                <option value="all">全部已审核询盘</option>
+                <option value="none">仅人工</option>
               </select>
             </div>
           </div>
@@ -534,51 +534,51 @@
       </div>
 
       <div class="mt-6 flex gap-3">
-        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
-        <button class="btn btn-secondary" onclick="resetSettings()">Reset to Defaults</button>
-        <span class="text-xs text-green-600 dark:text-green-400 self-center hidden" id="s-saved-msg"><i class="fas fa-check mr-1"></i> Saved!</span>
+        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存设置</button>
+        <button class="btn btn-secondary" onclick="resetSettings()">恢复默认</button>
+        <span class="text-xs text-green-600 dark:text-green-400 self-center hidden" id="s-saved-msg"><i class="fas fa-check mr-1"></i> 已保存</span>
       </div>
     </div>
 
     <!-- QUALITY REPORT VIEW -->
     <div id="view-quality-report" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Quality Inspection Report</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Quote processing metrics &amp; inspector performance</p>
-        <button type="button" class="btn btn-secondary mt-3" onclick="exportQualityJSON()">Export JSON</button>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">质检报告</h1>
+        <p class="text-sm text-slate-500 mt-0.5">报价处理指标与质检员表现</p>
+        <button type="button" class="btn btn-secondary mt-3" onclick="exportQualityJSON()">导出 JSON</button>
       </div>
 
       <!-- Summary Cards -->
       <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Quotes</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">报价总数</div>
           <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-total">0</div>
         </div>
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Approved</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">已通过</div>
           <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="r-approved">0</div>
         </div>
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Rejected</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">已拒绝</div>
           <div class="text-2xl font-bold text-red-600 dark:text-red-400" id="r-rejected">0</div>
         </div>
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Processing Time</div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-avgtime">0m</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">平均处理时长</div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-avgtime">0分</div>
         </div>
-        <div class="stat-card"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Quality Score</div><div id="r-avgquality" class="text-2xl font-bold text-slate-900 dark:text-white">0</div></div>
+        <div class="stat-card"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">平均质检评分</div><div id="r-avgquality" class="text-2xl font-bold text-slate-900 dark:text-white">0</div></div>
       </div>
 
       <!-- Quote Records Table -->
       <div class="card overflow-hidden mb-6">
         <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-600">
-          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">Recent Quote Decisions</h2>
+          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">近期报价决策</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="data-table w-full">
             <thead>
               <tr>
-                <th>Inquiry ID</th><th>Company</th><th>Product</th><th>Quote Amount</th><th>Status</th><th>Processing Time</th><th>Inspector</th><th>Date</th><th>Quality / Deductions</th>
+                <th>询盘编号</th><th>公司</th><th>产品</th><th>报价金额</th><th>状态</th><th>处理时长</th><th>质检员</th><th>日期</th><th>质检/扣分</th>
               </tr>
             </thead>
             <tbody id="report-table-body"></tbody>

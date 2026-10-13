@@ -1,6 +1,6 @@
-// scripts/variants.js — A/B/C 三视图实现
+// scripts/variants.js — 接待工作台
 // 数据源：window.MOCK_INQUIRIES（A2 主列表）+ window.MOCK_RECEPTION（V3-01 接待）
-// 不创建新 mock，不破坏现有 sidebar 8 view。三视图仅替换 dashboard 主区域。
+// 使用现有 mock，仅替换 dashboard 主区域。
 (function () {
   'use strict'
 
@@ -48,23 +48,31 @@
     return h + ':' + m
   }
 
-  // ---- 视图 A / C 已移除：James 要求仅保留 B 方案 ----
+  // ---- 视图 A / C 已物理移除：James 2026-10-13 确认仅保留 AI 接待工作台 ----
 
-  // ---- 4. 接待状态中文映射 ----
+  // ---- 4. 接待状态与渠道中文映射 ----
   var RECEPTION_STATUS_LABELS = {
     reception: '接待中',
     handoff: '转人工',
     handled: '交付人工',
     blocked: '已拦截'
   }
+  var CHANNEL_LABELS = {
+    email: '邮件',
+    whatsapp: 'WhatsApp',
+    mixed: '邮件+WhatsApp'
+  }
+  function channelLabel(c) {
+    return CHANNEL_LABELS[c] || c || ''
+  }
 
   // ---- 5. 视图 B：OKKI 风格 4 段工作台（最终版） ----
-  // 三方质检（销售自评 → 技术复核 → 品控终审）
+  // 三方质检（销售自评 → 技术复核 → AI 质检/品控终审）
   // 第四段由 qcStatus==='passed' 驱动，紫色 #8B5CF6 保留
   var QC_PARTIES = [
     { key: 'sales',   label: '销售自评' },
     { key: 'tech',    label: '技术复核' },
-    { key: 'quality', label: '品控终审' }
+    { key: 'quality', label: 'AI 质检 · 品控终审' }
   ]
   var QC_PARTIES_LABEL = QC_PARTIES.map(function (p) { return p.label }).join(' · ')
 
@@ -105,13 +113,13 @@
           + ' · 已通过 ' + qcCounts.passed + ' · 未通过 ' + qcCounts.failed
           + '</div>'
         : ''
-      var top3 = list.slice(0, 3).map(function (r) {
+      var top3 = list.slice(0, 2).map(function (r) {
         return '<div class="rounded-md p-3 mb-2 text-xs" style="background:rgba(255,255,255,0.04);border:1px solid rgba(148,163,184,0.15)">'
           + '<div class="flex items-center justify-between mb-1">'
           +   '<span class="font-medium text-white">' + escHtml(r.company) + '</span>'
           +   '<span class="text-slate-400">' + escHtml(r.country || '') + '</span>'
           + '</div>'
-          + '<div class="text-slate-500">' + escHtml(r.lastContactAt || '') + ' · ' + escHtml(r.channel || '') + '</div>'
+          + '<div class="text-slate-500">' + escHtml(r.lastContactAt || '') + ' · ' + escHtml(channelLabel(r.channel)) + '</div>'
           + '</div>'
       }).join('')
       var trendHtml = '<div class="flex items-center gap-2 mt-1">'
@@ -215,166 +223,33 @@
       +     '<tbody>' + tableRows + '</tbody></table></div></div>'
   }
 
-  // ---- 6. 视图 A / C（已移除：James 要求仅保留 B 方案；保留占位符避免 verify 脚本误报） ----
-  function renderA() {
-    return '<div class="card p-10 text-center text-slate-400">视图 A 已移除，仅保留 B 方案。</div>'
-  }
-  function renderC() {
-    return '<div class="card p-10 text-center text-slate-400">视图 C 已移除，仅保留 B 方案。</div>'
-  }
-  // 历史 renderC 残留函数体已清空（上一会话遗留的 AI 报价分析代码与 B 方案无关，不再需要）
-    var inquiries = window.MOCK_INQUIRIES || []
-    var inq = inquiries.find(function (i) { return i.quoteBreakdown }) || inquiries[0] || {}
-    var b = inq.quoteBreakdown || null
-    var inqId = inq.id || 'INQ-N/A'
-
-    // 左：询盘快照
-    var left = ''
-      + '<div class="card p-5 mb-4"><h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">询盘快照</h3>'
-      + '<div class="space-y-2 text-sm">'
-      + kvRow('ID', inq.id)
-      + kvRow('Company', inq.company)
-      + kvRow('Country', inq.country)
-      + kvRow('Product', inq.product)
-      + kvRow('Quantity', inq.qty)
-      + kvRow('Cycle', inq.cycle)
-      + kvRow('Usage', inq.usage)
-      + kvRow('Customization', inq.customization)
-      + '</div></div>'
-
-    // 中：AI 报价轨迹（兼容旧结构 {material,labor,logistics,marginPct,margin,total} 与 A2 新结构 {material,craft,logistics,compliance,margin:{percent,amount}}）
-    var mid = ''
-    if (b) {
-      // 旧结构：material/labor/logistics/marginPct/margin/total
-      // 新结构：material/craft/logistics/compliance/margin:{percent,amount}/subtotal/total
-      var isOld = !b.craft && !b.compliance && b.labor !== undefined
-      var rows
-      if (isOld) {
-        rows = [
-          { k: 'material',  label: '材料', d: { amount: b.material,  reason: '原材料 + 表面处理',  confidence: 0.85 } },
-          { k: 'labor',     label: '人工', d: { amount: b.labor,     reason: '加工 + 包装 + 质检',  confidence: 0.85 } },
-          { k: 'logistics', label: '物流', d: { amount: b.logistics, reason: '海运 + 港口 + 清关',  confidence: 0.80 } },
-          { k: 'margin',    label: '利润', d: { percent: b.marginPct, reason: '议价空间 / 风险对冲', confidence: 0.90, amount: b.margin } },
-        ]
-      } else {
-        rows = [
-          { k: 'material',   label: '材料',   d: b.material },
-          { k: 'craft',      label: '工艺',   d: b.craft },
-          { k: 'logistics',  label: '物流',   d: b.logistics },
-          { k: 'compliance', label: '合规',   d: b.compliance },
-          { k: 'margin',     label: '利润',   d: b.margin },
-        ]
-      }
-      var partsHtml = rows.map(function (r) {
-        if (!r.d) return ''
-        var amt
-        if (r.k === 'margin') {
-          if (r.d.percent !== undefined) amt = r.d.percent + '%'
-          else if (r.d.amount !== undefined) amt = '$' + r.d.amount
-          else amt = '—'
-        } else {
-          amt = r.d.amount !== undefined ? ('$' + r.d.amount) : '—'
-        }
-        return '<div class="flex items-start justify-between py-2 border-b border-slate-100 dark:border-slate-700">'
-          + '<div class="flex-1">'
-          +   '<div class="text-sm font-medium text-slate-700 dark:text-slate-200">' + r.label + '</div>'
-          +   '<div class="text-xs text-slate-500 mt-0.5">' + escHtml(r.d.reason || '') + '</div>'
-          + '</div>'
-          + '<div class="text-right ml-3">'
-          +   '<div class="font-mono text-sm font-semibold text-slate-900 dark:text-white">' + amt + '</div>'
-          +   '<div class="text-xs text-slate-400">' + Math.round((r.d.confidence || 0) * 100) + '% conf</div>'
-          + '</div></div>'
-      }).join('')
-      var subtotalVal = b.subtotal !== undefined ? b.subtotal : ((b.material || 0) + (b.labor || 0) + (b.logistics || 0))
-      var totalVal = b.total !== undefined ? b.total : (subtotalVal + (b.margin || 0))
-      mid = '<div class="card p-5 mb-4"><h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">AI 报价分项</h3>'
-        + partsHtml
-        + '<div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600 flex justify-between text-sm">'
-        +   '<span class="text-slate-500">Subtotal</span><span class="font-mono">$' + subtotalVal + '</span>'
-        + '</div>'
-        + '<div class="flex justify-between text-sm font-semibold">'
-        +   '<span>Total</span><span class="font-mono">$' + totalVal + '</span>'
-        + '</div></div>'
-    } else {
-      mid = '<div class="card p-5 mb-4"><h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">AI 报价分项</h3>'
-        + '<div class="text-xs text-slate-400">该询盘暂未生成报价（mock 数据无 quoteBreakdown）</div></div>'
-    }
-
-    // 右：质检 5 维
-    var dims = [
-      { k: 'anti_leak',     label: '防飞单',     s: 88 },
-      { k: 'communication', label: '沟通态度',   s: 76 },
-      { k: 'problem_solve', label: '问题解决',   s: 91 },
-      { k: 'requirement',   label: '需求理解',   s: 83 },
-      { k: 'product_know',  label: '产品知识',   s: 70 },
-    ]
-    function grade(s) {
-      if (s >= 90) return 'A'
-      if (s >= 80) return 'B'
-      if (s >= 70) return 'C'
-      return 'D'
-    }
-    function gradeColor(s) {
-      if (s >= 90) return '#10B981'
-      if (s >= 80) return '#3B82F6'
-      if (s >= 70) return '#F59E0B'
-      return '#EF4444'
-    }
-    var dimHtml = dims.map(function (d) {
-      return '<div class="mb-3">'
-        + '<div class="flex justify-between text-xs mb-1">'
-        +   '<span class="text-slate-600 dark:text-slate-300">' + d.label + '</span>'
-        +   '<span class="font-mono font-semibold" style="color:' + gradeColor(d.s) + '">' + d.s + ' · ' + grade(d.s) + '</span>'
-        + '</div>'
-        + '<div class="h-1.5 bg-slate-100 dark:bg-slate-700 rounded">'
-        +   '<div style="height:100%;width:' + d.s + '%;background:' + gradeColor(d.s) + ';border-radius:9999px"></div>'
-        + '</div></div>'
-    }).join('')
-    var right = '<div class="card p-5"><h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">质检 5 维</h3>' + dimHtml + '</div>'
-
-    return '<div class="mb-4 text-xs text-slate-500">当前询盘：<span class="font-mono">' + escHtml(inqId) + '</span></div>'
-      + '<div class="grid grid-cols-3 gap-4">'
-      +   '<div>' + left + '</div>'
-      +   '<div>' + mid + '</div>'
-      +   '<div>' + right + '</div>'
-      + '</div>'
-  }
-  function kvRow(k, v) {
-    return '<div class="flex justify-between gap-2">'
-      + '<span class="text-slate-500 text-xs">' + escHtml(k) + '</span>'
-      + '<span class="text-slate-900 dark:text-white text-right truncate">' + escHtml(v || '—') + '</span>'
-      + '</div>'
-  }
-
-  // ---- 7. 视图切换器（仅保留 B 方案） ----
-  // James 决定：只展示 B OKKI 视图，隐藏切换器按钮
-  function switcherHtml() {
+  // 工作台时间栏
+  function renderBHeader() {
     return '<div class="flex items-center justify-between mb-5">'
-      + '<div class="inline-flex rounded-md border border-slate-200 dark:border-slate-600 overflow-hidden" id="witop-abc-switcher">'
-      +   '<button type="button" data-v="b" class="px-4 py-1.5 text-sm font-medium text-white border-r border-slate-200 dark:border-slate-600" style="background:#2563eb;border-bottom:2px solid #2563eb">B · OKKI</button>'
-      + '</div>'
+      + '<div class="text-xs text-slate-400">维特普装饰 · AI 接待工作台</div>'
       + '<div class="text-xs text-slate-500"><span id="witop-now">—</span> · 今日 +' + todayPlus() + '</div>'
       + '</div>'
   }
 
   function applyVariantVisual(v) {
-    // 仅 B 方案，无切换逻辑
-    var btn = document.querySelector('#witop-abc-switcher button')
-    if (btn) {
-      btn.style.background = '#2563eb'
-      btn.style.color = '#fff'
-      btn.style.borderBottom = '2px solid #2563eb'
-    }
+    // 仅 AI 接待工作台，无切换逻辑
   }
 
   function renderInto() {
     var bEl = document.getElementById('variant-b')
-    if (bEl && !bEl.dataset.rendered) { bEl.innerHTML = renderB(); bEl.dataset.rendered = '1' }
-    // A/C 不再渲染，直接隐藏
-    var aEl = document.getElementById('variant-a')
-    var cEl = document.getElementById('variant-c')
-    if (aEl) aEl.classList.add('hidden')
-    if (cEl) cEl.classList.add('hidden')
+    if (bEl) {
+      if (!bEl.dataset.rendered) {
+        var host = document.getElementById('witop-abc-host')
+        if (host && !host.dataset.rendered) {
+          host.innerHTML = renderBHeader()
+          host.dataset.rendered = '1'
+        }
+        bEl.innerHTML = renderB()
+        bEl.dataset.rendered = '1'
+      }
+      // 关键：必须取消 hidden，否则 B 视图永远不可见
+      bEl.classList.remove('hidden')
+    }
   }
 
   function setVariant(v, opts) {
@@ -393,7 +268,6 @@
     if (!skipStorage) {
       try { localStorage.setItem('witop_abc_variant', v) } catch (e) {}
     }
-    applyVariantVisual(v)
     renderInto()
     var now = document.getElementById('witop-now')
     if (now) now.textContent = nowHHmm()
@@ -405,27 +279,13 @@
     return 'b'
   }
 
-  function mount() {
-    // 切换器点击
-    document.querySelectorAll('#witop-abc-switcher button').forEach(function (btn) {
-      btn.addEventListener('click', function () { setVariant(btn.getAttribute('data-v')) })
-    })
-    var v = getVariant()
-    setVariant(v, { skipUrl: true, skipStorage: true, skipLog: true })
-    logBuild()
-  }
-
   // 暴露
   window.witopSetVariant = setVariant
   window.witopGetVariant = getVariant
   window.witopRenderVariants = renderInto
   window.witopRenderSwitcher = function () {
-    var host = document.getElementById('witop-abc-host')
-    if (host && !host.dataset.rendered) {
-      host.innerHTML = switcherHtml()
-      host.dataset.rendered = '1'
-    }
-    mount()
+    // 兼容 index.html 的工作台初始化入口
+    renderInto()
   }
 
   if (document.readyState === 'loading') {
