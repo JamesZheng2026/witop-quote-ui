@@ -93,14 +93,22 @@
   function renderB() {
     var recs = window.MOCK_RECEPTION || []
     var segs = [
-      { key: 'reception', label: '询盘接入', color: '#3B82F6' },
-      { key: 'handoff',   label: '已接待',   color: '#10B981' },
-      { key: 'handled',   label: '交付人工', color: '#F59E0B' },
-      { key: 'blocked',   label: '人工已接手', color: '#8B5CF6' },
+      { key: 'reception', label: '询盘接入', color: '#3B82F6', filterFn: function (r) { return r.receptionStatus === 'reception' } },
+      { key: 'handoff',   label: '已接待',   color: '#10B981', filterFn: function (r) { return r.receptionStatus === 'handoff' } },
+      { key: 'handled',   label: '交付人工', color: '#F59E0B', filterFn: function (r) { return r.receptionStatus === 'handled' } },
+      { key: 'qcPassed',  label: '质检通过', color: '#8B5CF6', filterFn: function (r) { return r.qcStatus === 'passed' } },
     ]
     var segsHtml = segs.map(function (s) {
-      var list = recs.filter(function (r) { return r.receptionStatus === s.key })
+      var list = recs.filter(s.filterFn)
       var n = list.length
+      // 质检段下方小注
+      var qcMeta = (s.key === 'qcPassed') ? (function () {
+        var pending = recs.filter(function (r) { return r.qcStatus === 'pending' }).length
+        var inReview = recs.filter(function (r) { return r.qcStatus === 'in_review' }).length
+        var passed = recs.filter(function (r) { return r.qcStatus === 'passed' }).length
+        var failed = recs.filter(function (r) { return r.qcStatus === 'failed' }).length
+        return '<div class="text-xs text-slate-400 mt-1">' + ['质检中 ' + inReview, '待审 ' + pending, '已通过 ' + passed, '未通过 ' + failed].join(' · ') + '</div>'
+      }()) : ''
       var top3 = list.slice(0, 3).map(function (r) {
         return '<div class="border border-slate-200 dark:border-slate-600 rounded-md p-3 mb-2 text-xs">'
           + '<div class="flex items-center justify-between mb-1">'
@@ -120,8 +128,31 @@
         +   '<span style="font-size:24px;font-weight:700;color:#1A2332">' + n + '</span>'
         +   '<span class="text-xs text-slate-500">+ ' + todayPlus() + ' 今日</span>'
         + '</div>'
+        + qcMeta
         + '<div class="mt-2 max-h-48 overflow-y-auto">' + (top3 || '<div class="text-xs text-slate-400">— 无 —</div>') + '</div>'
         + '</div>'
+    }).join('')
+
+    // 质检状态颜色映射
+    var qcStatusColor = { pending: '#94a3b8', in_review: '#f59e0b', passed: '#10b981', failed: '#ef4444' }
+    var qcStatusLabel = { pending: '待质检', in_review: '质检中', passed: '已通过', failed: '未通过' }
+
+    var tableRows = recs.map(function (r) {
+      var qc = r.qcStatus || 'pending'
+      var qcColor = qcStatusColor[qc] || '#94a3b8'
+      var qcText = qcStatusLabel[qc] || qc
+      return '<tr class="cursor-pointer" onclick="showView(\'reception-workbench\')">'
+        + '<td class="text-slate-500">' + escHtml(r.id) + '</td>'
+        + '<td class="font-medium text-slate-900 dark:text-white">' + escHtml(r.company) + '</td>'
+        + '<td>' + escHtml(r.country || '—') + '</td>'
+        + '<td>' + escHtml(r.channel || '—') + '</td>'
+        + '<td><span class="status-pill">' + escHtml(r.receptionStatus) + '</span></td>'
+        + '<td><span style="display:inline-flex;align-items:center;gap:4px">'
+        +   '<span style="width:6px;height:6px;border-radius:50%;background:' + qcColor + ';flex-shrink:0"></span>'
+        +   '<span style="color:' + qcColor + ';font-size:12px">' + escHtml(qcText) + '</span>'
+        + '</span></td>'
+        + '<td class="text-slate-500 text-xs">' + escHtml(r.lastContactAt || '—') + '</td>'
+        + '</tr>'
     }).join('')
 
     return '<div class="card p-5 mb-6"><div class="grid grid-cols-4 gap-3">' + segsHtml + '</div></div>'
@@ -131,19 +162,8 @@
       +     '<button class="btn btn-secondary btn-sm" onclick="showView(\'reception-workbench\')">完整工作台</button>'
       +   '</div>'
       +   '<div class="overflow-x-auto"><table class="data-table w-full text-sm">'
-      +     '<thead><tr><th>ID</th><th>公司</th><th>国家</th><th>渠道</th><th>状态</th><th>最近沟通</th></tr></thead>'
-      +     '<tbody>'
-      +       recs.slice(0, 10).map(function (r) {
-              return '<tr class="cursor-pointer" onclick="showView(\'reception-workbench\')">'
-                + '<td class="text-slate-500">' + escHtml(r.id) + '</td>'
-                + '<td class="font-medium text-slate-900 dark:text-white">' + escHtml(r.company) + '</td>'
-                + '<td>' + escHtml(r.country || '—') + '</td>'
-                + '<td>' + escHtml(r.channel || '—') + '</td>'
-                + '<td>' + escHtml(r.receptionStatus) + '</td>'
-                + '<td class="text-slate-500 text-xs">' + escHtml(r.lastContactAt || '—') + '</td>'
-                + '</tr>'
-            }).join('')
-      +     '</tbody></table></div></div>'
+      +     '<thead><tr><th>ID</th><th>公司</th><th>国家</th><th>渠道</th><th>接待状态</th><th>质检状态</th><th>最近沟通</th></tr></thead>'
+      +     '<tbody>' + tableRows + '</tbody></table></div></div>'
   }
 
   // ---- 4. 视图 C：AI 报价分析主导 ----
