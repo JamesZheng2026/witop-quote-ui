@@ -96,6 +96,9 @@
     .reception-status-dot { width: 6px; height: 6px; border-radius: 9999px; display: inline-block; flex-shrink: 0; }
     .reception-stepper-sub { font-size: 11px; color: #94a3b8; }
   </style>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex">
 
@@ -145,120 +148,14 @@
     <div id="view-dashboard" class="view p-6">
       <div class="mb-6">
         <h1 class="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Inquiry overview &amp; lifecycle funnel</p>
+        <p class="text-sm text-slate-500 mt-0.5">A/B/C 三个信息架构 demo · 顶部切换</p>
       </div>
 
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Inquiries</div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-total">0</div>
-          <div class="text-xs text-slate-400 mt-1">All time</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Handled</div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-handled">0</div>
-          <div class="text-xs text-slate-400 mt-1">Responded</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">High Intent</div>
-          <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="stat-highintent">0</div>
-          <div class="text-xs text-slate-400 mt-1">Ready to quote</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Unhandled</div>
-          <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="stat-unhandled">0</div>
-          <div class="text-xs text-slate-400 mt-1">Awaiting review</div>
-        </div>
-      </div>
+      <div id="witop-abc-host"></div>
 
-      <!-- Filters -->
-      <div class="card p-4 mb-6">
-        <div class="flex flex-wrap gap-3 items-end">
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Status</label>
-            <select class="input-field" id="dash-filter-status" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="New">New</option>
-              <option value="Reviewed">Reviewed</option>
-              <option value="Quoting">Quoting</option>
-              <option value="Quoted">Quoted</option>
-              <option value="Negotiating">Negotiating</option>
-              <option value="Won">Won</option>
-              <option value="Lost">Lost</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Intent</label>
-            <select class="input-field" id="dash-filter-intent" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="Cold">Cold</option>
-              <option value="Warm">Warm</option>
-              <option value="Hot">Hot</option>
-              <option value="High Intent">High Intent</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Country</label>
-            <select class="input-field" id="dash-filter-country" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="UAE">UAE</option>
-              <option value="Saudi Arabia">Saudi Arabia</option>
-              <option value="USA">USA</option>
-              <option value="UK">UK</option>
-              <option value="Nigeria">Nigeria</option>
-              <option value="Egypt">Egypt</option>
-              <option value="Philippines">Philippines</option>
-              <option value="Vietnam">Vietnam</option>
-              <option value="Germany">Germany</option>
-              <option value="Australia">Australia</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Product</label>
-            <select class="input-field" id="dash-filter-product" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="WPC Wall Panel">WPC Wall Panel</option>
-              <option value="SPC Flooring">SPC Flooring</option>
-              <option value="UV Panel">UV Panel</option>
-              <option value="WPC Ceiling">WPC Ceiling</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">From</label>
-            <input type="date" class="input-field" id="dash-filter-from" onchange="renderDashboard()">
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">To</label>
-            <input type="date" class="input-field" id="dash-filter-to" onchange="renderDashboard()">
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="clearDashboardFilters()">Clear</button>
-        </div>
-      </div>
-
-      <!-- Funnel -->
-      <div class="card p-5 mb-6">
-        <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200 mb-4">Inquiry Lifecycle Funnel</h2>
-        <div class="space-y-2.5" id="funnel-container"></div>
-      </div>
-
-      <!-- Recent Activity Table -->
-      <div class="card overflow-hidden">
-        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center">
-          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">Recent Inquiries</h2>
-          <button class="btn btn-secondary btn-sm" onclick="showView('inquiries')">View All</button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="data-table w-full">
-            <thead>
-              <tr>
-                <th>ID</th><th>Company</th><th>Country</th><th>Product</th><th>Intent</th><th>Status</th><th>Date</th><th>Quote</th>
-              </tr>
-            </thead>
-            <tbody id="recent-table-body"></tbody>
-          </table>
-        </div>
-      </div>
+      <section id="variant-a" class="hidden"></section>
+      <section id="variant-b" class="hidden"></section>
+      <section id="variant-c" class="hidden"></section>
     </div>
 
     <!-- INQUIRIES VIEW -->
@@ -862,8 +759,9 @@
   </div>
 
 
-<script src="scripts/state.js"></script>
-<script src="scripts/reception-bridge.js"></script>
+<script src="scripts/state.js?v=8b89e90-1791856622"></script>
+<script src="scripts/reception-bridge.js?v=8b89e90-1791856622"></script>
+<script src="scripts/okki-adapter.js?v=8b89e90-1791856622"></script>
 <script>
 // V3-01b Visual QA helper: ?view=reception-workbench&drawer=REC-001&trigger=1
 // 仅在 file:// + 包含 ?view= 时生效, 跑完即清. 不影响正常使用.
@@ -1166,7 +1064,7 @@ function showView(name) {
   const nav = document.getElementById('nav-' + name);
   if (nav) nav.classList.add('active');
 
-  if (name === 'dashboard') renderDashboard();
+  if (name === 'dashboard') { renderDashboard(); if (window.witopRenderVariants) window.witopRenderVariants(); }
   else if (name === 'inquiries') renderInquiries();
   else if (name === 'settings') renderSettings();
   else if (name === 'quality-report') renderReport();
@@ -1180,6 +1078,10 @@ function showView(name) {
 // ============================================================
 
 function renderDashboard() {
+  // V3-ABC: dashboard view 已被 A/B/C variants 接管；保留函数以兼容其它视图潜在调用，缺失 DOM 时静默
+  if (!document.getElementById('stat-total') && !document.getElementById('funnel-container') && !document.getElementById('recent-table-body')) {
+    return
+  }
   const fs = getDashboardFilters();
   const filtered = filterInquiries(inquiries, fs);
 
@@ -1188,10 +1090,12 @@ function renderDashboard() {
   const highIntent = inquiries.filter(i => i.intent === 'High Intent').length;
   const unhandled = inquiries.filter(i => i.status === 'New').length;
 
-  document.getElementById('stat-total').textContent = total.toLocaleString();
-  document.getElementById('stat-handled').textContent = handled.toLocaleString();
-  document.getElementById('stat-highintent').textContent = highIntent.toLocaleString();
-  document.getElementById('stat-unhandled').textContent = unhandled.toLocaleString();
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v }
+  function setHTML(id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v }
+  setText('stat-total', total.toLocaleString());
+  setText('stat-handled', handled.toLocaleString());
+  setText('stat-highintent', highIntent.toLocaleString());
+  setText('stat-unhandled', unhandled.toLocaleString());
 
   // Funnel
   const stages = STATUSES.map(status => ({ label: status, count: inquiries.filter(i => i.status === status).length, color: STATUS_COLORS[status] }));
@@ -1205,27 +1109,27 @@ function renderDashboard() {
       </div>
     </div>`;
   }).join('');
-  document.getElementById('funnel-container').innerHTML = funnelHTML;
+  setHTML('funnel-container', funnelHTML);
 
   // Recent table
   const recent = [...inquiries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
-  const tbody = document.getElementById('recent-table-body');
-  tbody.innerHTML = recent.map(i => tableRowHTML(i)).join('');
+  setHTML('recent-table-body', recent.map(i => tableRowHTML(i)).join(''));
 }
 
 function getDashboardFilters() {
+  function v(id) { var el = document.getElementById(id); return el ? el.value : '' }
   return {
-    status: document.getElementById('dash-filter-status').value,
-    intent: document.getElementById('dash-filter-intent').value,
-    country: document.getElementById('dash-filter-country').value,
-    product: document.getElementById('dash-filter-product').value,
-    from: document.getElementById('dash-filter-from').value,
-    to: document.getElementById('dash-filter-to').value,
+    status:  v('dash-filter-status'),
+    intent:  v('dash-filter-intent'),
+    country: v('dash-filter-country'),
+    product: v('dash-filter-product'),
+    from:    v('dash-filter-from'),
+    to:      v('dash-filter-to'),
   };
 }
 
 function clearDashboardFilters() {
-  ['dash-filter-status','dash-filter-intent','dash-filter-country','dash-filter-product','dash-filter-from','dash-filter-to'].forEach(id => document.getElementById(id).value = '');
+  ['dash-filter-status','dash-filter-intent','dash-filter-country','dash-filter-product','dash-filter-from','dash-filter-to'].forEach(id => { var el = document.getElementById(id); if (el) el.value = '' });
   renderDashboard();
 }
 
@@ -2174,6 +2078,7 @@ function openReceptionTriggerDrawer() {
 window.MOCK_RECEPTION = MOCK_RECEPTION;
 window.RECEPTION_STATUSES = RECEPTION_STATUSES;
 window.RECEPTION_STATUS_LABELS = RECEPTION_STATUS_LABELS;
+window.MOCK_INQUIRIES = MOCK_INQUIRIES;
 
 // ============================================================
 // UTILITIES
@@ -2191,5 +2096,6 @@ if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').match
 
 init();
 </script>
+<script src="scripts/variants.js?v=8b89e90-1791856622"></script>
 </body>
 </html>
