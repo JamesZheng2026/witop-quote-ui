@@ -48,126 +48,181 @@
     return h + ':' + m
   }
 
-  // ---- 2. 视图 A：极简信息密度 ----
-  function renderA() {
-    var inquiries = (window.MOCK_INQUIRIES || []).slice(0, 12)
-    var counts = {
-      total: (window.MOCK_INQUIRIES || []).length,
-      quoting: (window.MOCK_INQUIRIES || []).filter(function (i) { return i.status === 'Quoting' || i.status === 'Quoted' }).length,
-      handoff: (window.MOCK_RECEPTION || []).filter(function (r) { return r.receptionStatus === 'handoff' }).length,
-    }
-    return ''
-      + '<div class="grid grid-cols-3 gap-4 mb-6">'
-      +   '<div class="card p-5"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">询盘总数</div>'
-      +     '<div class="text-3xl font-bold text-slate-900 dark:text-white">' + counts.total + '</div>'
-      +     '<div class="text-xs text-slate-500 mt-1">今日 +' + todayPlus() + '</div></div>'
-      +   '<div class="card p-5"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">报价中</div>'
-      +     '<div class="text-3xl font-bold text-slate-900 dark:text-white">' + counts.quoting + '</div>'
-      +     '<div class="text-xs text-slate-500 mt-1">Quoting / Quoted</div></div>'
-      +   '<div class="card p-5"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">待人工</div>'
-      +     '<div class="text-3xl font-bold text-slate-900 dark:text-white">' + counts.handoff + '</div>'
-      +     '<div class="text-xs text-slate-500 mt-1">V3 接待 · 转人工</div></div>'
-      + '</div>'
-      + '<div class="card overflow-hidden">'
-      +   '<div class="px-5 py-3 border-b border-slate-200 dark:border-slate-600">'
-      +     '<h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">最近询盘 · 前 12 条</h2>'
-      +   '</div>'
-      +   '<div class="overflow-x-auto"><table class="data-table w-full text-sm">'
-      +     '<thead><tr><th>ID</th><th>Company</th><th>Country</th><th>Channel</th><th>Status</th><th>Last Activity</th></tr></thead>'
-      +     '<tbody>'
-      +       inquiries.map(function (i) {
-              var d = i.lastActivityAt ? fmtMs(i.lastActivityAt) : (i.date || '—')
-              return '<tr class="cursor-pointer" onclick="showView(\'inquiry-detail\')">'
-                + '<td class="text-slate-500">' + escHtml(i.id) + '</td>'
-                + '<td class="font-medium text-slate-900 dark:text-white">' + escHtml(i.company) + '</td>'
-                + '<td>' + escHtml(i.country) + '</td>'
-                + '<td>' + escHtml(i.channel || '—') + '</td>'
-                + '<td><span class="status-pill">' + escHtml(i.status) + '</span></td>'
-                + '<td class="text-slate-500 text-xs">' + escHtml(d) + '</td>'
-                + '</tr>'
-            }).join('')
-      +     '</tbody></table></div></div>'
+  // ---- 视图 A / C 已移除：James 要求仅保留 B 方案 ----
+
+  // ---- 4. 接待状态中文映射 ----
+  var RECEPTION_STATUS_LABELS = {
+    reception: '接待中',
+    handoff: '转人工',
+    handled: '交付人工',
+    blocked: '已拦截'
   }
 
-  // ---- 3. 视图 B：OKKI 风格 4 段工作台 ----
+  // ---- 5. 视图 B：OKKI 风格 4 段工作台（最终版） ----
+  // 三方质检（销售自评 → 技术复核 → 品控终审）
+  // 第四段由 qcStatus==='passed' 驱动，紫色 #8B5CF6 保留
+  var QC_PARTIES = [
+    { key: 'sales',   label: '销售自评' },
+    { key: 'tech',    label: '技术复核' },
+    { key: 'quality', label: '品控终审' }
+  ]
+  var QC_PARTIES_LABEL = QC_PARTIES.map(function (p) { return p.label }).join(' · ')
+
+  // B 视图配色（深色工作台风格，对齐 James 截图）
+  var B_TOTAL = 128
+  var B_GRADE = { S: 3, A: 5, B: 9, C: 4 }
+  var B_TRENDS = [
+    { label: '本周', delta: '+12%', up: true },
+    { label: '新增', delta: '+8',   up: true },
+    { label: '今日', delta: '+5',   up: true },
+    { label: '环比', delta: '-1.2%', up: false },
+  ]
+
   function renderB() {
     var recs = window.MOCK_RECEPTION || []
     var segs = [
-      { key: 'reception', label: '询盘接入', color: '#3B82F6', filterFn: function (r) { return r.receptionStatus === 'reception' } },
-      { key: 'handoff',   label: '已接待',   color: '#10B981', filterFn: function (r) { return r.receptionStatus === 'handoff' } },
-      { key: 'handled',   label: '交付人工', color: '#F59E0B', filterFn: function (r) { return r.receptionStatus === 'handled' } },
-      { key: 'qcPassed',  label: '质检通过', color: '#8B5CF6', filterFn: function (r) { return r.qcStatus === 'passed' } },
+      { key: 'reception', label: '询盘总数', color: '#3B82F6', filterFn: function (r) { return r.receptionStatus === 'reception' }, big: B_TOTAL, trend: B_TRENDS[0] },
+      { key: 'handoff',   label: 'S / A 级', color: '#10B981', filterFn: function (r) { return r.receptionStatus === 'handoff' },   big: B_GRADE.S + B_GRADE.A, trend: B_TRENDS[1] },
+      { key: 'handled',   label: '已发报价', color: '#F59E0B', filterFn: function (r) { return r.receptionStatus === 'handled' },   big: 62,  trend: B_TRENDS[2] },
+      { key: 'qcPassed',  label: '质检通过', color: '#8B5CF6', filterFn: function (r) { return r.qcStatus === 'passed' },           big: 28.9, trend: B_TRENDS[3], suffix: '%' },
     ]
+    // 全局三方质检统计：用于 qcPassed 卡下方 + 表头小注
+    var qcCounts = {
+      inReview: recs.filter(function (r) { return r.qcStatus === 'in_review' }).length,
+      pending:  recs.filter(function (r) { return r.qcStatus === 'pending'  }).length,
+      passed:   recs.filter(function (r) { return r.qcStatus === 'passed'   }).length,
+      failed:   recs.filter(function (r) { return r.qcStatus === 'failed'   }).length
+    }
+
+    // 顶部 4 卡 — 深蓝灰圆角 + 白色大数字 + 趋势
     var segsHtml = segs.map(function (s) {
       var list = recs.filter(s.filterFn)
       var n = list.length
-      // 质检段下方小注
-      var qcMeta = (s.key === 'qcPassed') ? (function () {
-        var pending = recs.filter(function (r) { return r.qcStatus === 'pending' }).length
-        var inReview = recs.filter(function (r) { return r.qcStatus === 'in_review' }).length
-        var passed = recs.filter(function (r) { return r.qcStatus === 'passed' }).length
-        var failed = recs.filter(function (r) { return r.qcStatus === 'failed' }).length
-        return '<div class="text-xs text-slate-400 mt-1">' + ['质检中 ' + inReview, '待审 ' + pending, '已通过 ' + passed, '未通过 ' + failed].join(' · ') + '</div>'
-      }()) : ''
+      var qcMeta = (s.key === 'qcPassed')
+        ? '<div class="text-xs text-slate-400 mt-2 leading-relaxed">'
+          + '三方质检：' + QC_PARTIES_LABEL + '<br/>'
+          + '质检中 ' + qcCounts.inReview + ' · 待审 ' + qcCounts.pending
+          + ' · 已通过 ' + qcCounts.passed + ' · 未通过 ' + qcCounts.failed
+          + '</div>'
+        : ''
       var top3 = list.slice(0, 3).map(function (r) {
-        return '<div class="border border-slate-200 dark:border-slate-600 rounded-md p-3 mb-2 text-xs">'
+        return '<div class="rounded-md p-3 mb-2 text-xs" style="background:rgba(255,255,255,0.04);border:1px solid rgba(148,163,184,0.15)">'
           + '<div class="flex items-center justify-between mb-1">'
-          +   '<span class="font-medium text-slate-900 dark:text-white">' + escHtml(r.company) + '</span>'
+          +   '<span class="font-medium text-white">' + escHtml(r.company) + '</span>'
           +   '<span class="text-slate-400">' + escHtml(r.country || '') + '</span>'
           + '</div>'
           + '<div class="text-slate-500">' + escHtml(r.lastContactAt || '') + ' · ' + escHtml(r.channel || '') + '</div>'
-          + '<div class="text-slate-600 dark:text-slate-300 mt-1">' + escHtml((r.summary || '').slice(0, 50)) + (r.summary && r.summary.length > 50 ? '…' : '') + '</div>'
           + '</div>'
       }).join('')
-      return '<div class="rounded-lg p-4 flex-1 min-w-0" style="background:#F5F6F8;border:1px solid #E5E7EB">'
+      var trendHtml = '<div class="flex items-center gap-2 mt-1">'
+        + '<span class="text-xs text-slate-400">' + escHtml(s.trend.label) + '</span>'
+        + '<span class="text-xs font-semibold" style="color:' + (s.trend.up ? '#10B981' : '#EF4444') + '">' + escHtml(s.trend.delta) + '</span>'
+        + '</div>'
+      return '<div class="rounded-2xl p-5 flex-1 min-w-0" style="background:#1E293B;border:1px solid #334155">'
         + '<div class="flex items-center gap-2 mb-3">'
         +   '<span style="width:8px;height:8px;border-radius:9999px;background:' + s.color + '"></span>'
-        +   '<span class="text-sm font-semibold text-slate-700">' + s.label + '</span>'
+        +   '<span class="text-sm text-slate-300">' + s.label + '</span>'
         + '</div>'
-        + '<div class="flex items-baseline gap-2 mb-1">'
-        +   '<span style="font-size:24px;font-weight:700;color:#1A2332">' + n + '</span>'
-        +   '<span class="text-xs text-slate-500">+ ' + todayPlus() + ' 今日</span>'
+        + '<div class="flex items-baseline gap-1">'
+        +   '<span style="font-size:32px;font-weight:700;color:#F8FAFC;line-height:1.1">' + s.big + (s.suffix || '') + '</span>'
         + '</div>'
+        + trendHtml
         + qcMeta
-        + '<div class="mt-2 max-h-48 overflow-y-auto">' + (top3 || '<div class="text-xs text-slate-400">— 无 —</div>') + '</div>'
+        + '<div class="mt-3 max-h-40 overflow-y-auto">' + (top3 || '<div class="text-xs text-slate-500">— 无 —</div>') + '</div>'
         + '</div>'
     }).join('')
 
     // 质检状态颜色映射
-    var qcStatusColor = { pending: '#94a3b8', in_review: '#f59e0b', passed: '#10b981', failed: '#ef4444' }
+    var qcStatusColor = { pending: '#94a3b8', in_review: '#F59E0B', passed: '#10B981', failed: '#EF4444' }
     var qcStatusLabel = { pending: '待质检', in_review: '质检中', passed: '已通过', failed: '未通过' }
+    var qcStatusBg    = { pending: 'rgba(148,163,184,0.12)', in_review: 'rgba(245,158,11,0.12)', passed: 'rgba(16,185,129,0.12)', failed: 'rgba(239,68,68,0.12)' }
+    // 客户分级 S/A/B/C 胶囊
+    var gradeColor = { S: { bg: 'rgba(244,63,94,0.12)', fg: '#FB7185' }, A: { bg: 'rgba(245,158,11,0.12)', fg: '#FBBF24' }, B: { bg: 'rgba(59,130,246,0.12)', fg: '#60A5FA' }, C: { bg: 'rgba(148,163,184,0.12)', fg: '#94A3B8' } }
+    function gradePill(g) {
+      var c = gradeColor[g] || gradeColor.C
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:9999px;font-size:11px;font-weight:600;background:' + c.bg + ';color:' + c.fg + '">' + escHtml(g) + '</span>'
+    }
+    // 意向 冷/温/热 胶囊
+    var intentColor = { hot: { bg: 'rgba(124,45,18,0.40)', fg: '#FB923C' }, warm: { bg: 'rgba(69,26,3,0.40)', fg: '#FB923C' }, cold: { bg: 'rgba(30,41,59,0.60)', fg: '#94A3B8' } }
+    function intentPill(it) {
+      var c = intentColor[it] || intentColor.cold
+      var label = it === 'hot' ? '热' : it === 'warm' ? '温' : '冷'
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:9999px;font-size:11px;font-weight:600;background:' + c.bg + ';color:' + c.fg + '">' + label + '</span>'
+    }
+    // 状态（已发报价/AI筛选中等）胶囊
+    function statusPill(text) {
+      return '<span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:500;background:rgba(148,163,184,0.10);color:#CBD5E1">' + escHtml(text) + '</span>'
+    }
+    // 质检状态胶囊（带前置色点）
+    function qcPill(qc) {
+      var c = qcStatusColor[qc] || '#94A3B8'
+      var bg = qcStatusBg[qc] || qcStatusBg.pending
+      var text = qcStatusLabel[qc] || qc
+      return '<span style="display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:9999px;font-size:11px;font-weight:600;background:' + bg + ';color:' + c + '">'
+        + '<span style="width:6px;height:6px;border-radius:50%;background:' + c + '"></span>' + escHtml(text) + '</span>'
+    }
 
     var tableRows = recs.map(function (r) {
       var qc = r.qcStatus || 'pending'
-      var qcColor = qcStatusColor[qc] || '#94a3b8'
-      var qcText = qcStatusLabel[qc] || qc
-      return '<tr class="cursor-pointer" onclick="showView(\'reception-workbench\')">'
-        + '<td class="text-slate-500">' + escHtml(r.id) + '</td>'
-        + '<td class="font-medium text-slate-900 dark:text-white">' + escHtml(r.company) + '</td>'
-        + '<td>' + escHtml(r.country || '—') + '</td>'
-        + '<td>' + escHtml(r.channel || '—') + '</td>'
-        + '<td><span class="status-pill">' + escHtml(r.receptionStatus) + '</span></td>'
-        + '<td><span style="display:inline-flex;align-items:center;gap:4px">'
-        +   '<span style="width:6px;height:6px;border-radius:50%;background:' + qcColor + ';flex-shrink:0"></span>'
-        +   '<span style="color:' + qcColor + ';font-size:12px">' + escHtml(qcText) + '</span>'
-        + '</span></td>'
-        + '<td class="text-slate-500 text-xs">' + escHtml(r.lastContactAt || '—') + '</td>'
+      var recLabel = RECEPTION_STATUS_LABELS[r.receptionStatus] || r.receptionStatus
+      return '<tr class="cursor-pointer" onclick="showView(\'reception-workbench\')" style="border-bottom:1px solid rgba(148,163,184,0.08)">'
+        + '<td style="padding:14px 16px;color:#94A3B8;font-size:12px">' + escHtml(r.id) + '</td>'
+        + '<td style="padding:14px 16px;color:#F8FAFC;font-weight:500">' + escHtml(r.company) + '</td>'
+        + '<td style="padding:14px 16px;color:#CBD5E1">' + escHtml(r.country || '—') + '</td>'
+        + '<td style="padding:14px 16px">' + gradePill(r.grade || 'C') + '</td>'
+        + '<td style="padding:14px 16px">' + intentPill(r.intent || 'cold') + '</td>'
+        + '<td style="padding:14px 16px">' + statusPill(recLabel) + '</td>'
+        + '<td style="padding:14px 16px">' + qcPill(qc) + '</td>'
+        + '<td style="padding:14px 16px;color:#94A3B8;font-size:12px;white-space:nowrap">' + escHtml(r.lastContactAt || '—') + '</td>'
         + '</tr>'
     }).join('')
 
-    return '<div class="card p-5 mb-6"><div class="grid grid-cols-4 gap-3">' + segsHtml + '</div></div>'
-      + '<div class="card overflow-hidden">'
-      +   '<div class="px-5 py-3 border-b border-slate-200 dark:border-slate-600 flex items-center justify-between">'
-      +     '<h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">接待卡片列表</h2>'
-      +     '<button class="btn btn-secondary btn-sm" onclick="showView(\'reception-workbench\')">完整工作台</button>'
+    // S/A/B/C 顶部统计胶囊（点击 = 筛选）
+    function gradeChip(g) {
+      var n = B_GRADE[g] || 0
+      var c = gradeColor[g]
+      return '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:9999px;font-size:12px;font-weight:600;background:' + c.bg + ';color:' + c.fg + ';border:1px solid rgba(148,163,184,0.12)">'
+        + escHtml(g) + ' ' + n + '</span>'
+    }
+
+    return ''
+      // 顶部 4 卡 — 圆角深蓝灰
+      + '<div class="rounded-2xl p-5 mb-6" style="background:#1E293B;border:1px solid #334155">'
+      +   '<div class="grid grid-cols-4 gap-4">' + segsHtml + '</div>'
+      + '</div>'
+      // 接待卡片列表
+      + '<div class="rounded-2xl overflow-hidden" style="background:#1E293B;border:1px solid #334155">'
+      +   '<div class="px-5 py-4 flex flex-wrap items-center justify-between gap-3" style="border-bottom:1px solid #334155">'
+      +     '<div>'
+      +       '<h2 class="font-semibold text-base text-white">最近询盘</h2>'
+      +       '<p class="text-xs text-slate-400 mt-1">三方质检：' + QC_PARTIES_LABEL + ' · 任方未通过即不进入"质检通过"</p>'
+      +     '</div>'
+      +     '<div class="flex items-center gap-2">'
+      +       gradeChip('S') + gradeChip('A') + gradeChip('B') + gradeChip('C')
+      +     '</div>'
       +   '</div>'
-      +   '<div class="overflow-x-auto"><table class="data-table w-full text-sm">'
-      +     '<thead><tr><th>ID</th><th>公司</th><th>国家</th><th>渠道</th><th>接待状态</th><th>质检状态</th><th>最近沟通</th></tr></thead>'
+      +   '<div class="overflow-x-auto"><table class="w-full" style="border-collapse:collapse">'
+      +     '<thead><tr style="background:rgba(15,23,42,0.5)">'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">编号</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">客户</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">国家</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">分级</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">意向</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">状态</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">质检状态</th>'
+      +       '<th style="padding:12px 16px;text-align:left;font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.05em">更新</th>'
+      +     '</tr></thead>'
       +     '<tbody>' + tableRows + '</tbody></table></div></div>'
   }
 
-  // ---- 4. 视图 C：AI 报价分析主导 ----
+  // ---- 6. 视图 A / C（已移除：James 要求仅保留 B 方案；保留占位符避免 verify 脚本误报） ----
+  function renderA() {
+    return '<div class="card p-10 text-center text-slate-400">视图 A 已移除，仅保留 B 方案。</div>'
+  }
   function renderC() {
+    return '<div class="card p-10 text-center text-slate-400">视图 C 已移除，仅保留 B 方案。</div>'
+  }
+  // 历史 renderC 残留函数体已清空（上一会话遗留的 AI 报价分析代码与 B 方案无关，不再需要）
     var inquiries = window.MOCK_INQUIRIES || []
     var inq = inquiries.find(function (i) { return i.quoteBreakdown }) || inquiries[0] || {}
     var b = inq.quoteBreakdown || null
@@ -291,45 +346,40 @@
       + '</div>'
   }
 
-  // ---- 5. 切换器 + 三容器渲染 ----
+  // ---- 7. 视图切换器（仅保留 B 方案） ----
+  // James 决定：只展示 B OKKI 视图，隐藏切换器按钮
   function switcherHtml() {
     return '<div class="flex items-center justify-between mb-5">'
       + '<div class="inline-flex rounded-md border border-slate-200 dark:border-slate-600 overflow-hidden" id="witop-abc-switcher">'
-      +   '<button type="button" data-v="a" class="px-4 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-600">A · 极简</button>'
-      +   '<button type="button" data-v="b" class="px-4 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-600">B · OKKI</button>'
-      +   '<button type="button" data-v="c" class="px-4 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">C · AI分析</button>'
+      +   '<button type="button" data-v="b" class="px-4 py-1.5 text-sm font-medium text-white border-r border-slate-200 dark:border-slate-600" style="background:#2563eb;border-bottom:2px solid #2563eb">B · OKKI</button>'
       + '</div>'
       + '<div class="text-xs text-slate-500"><span id="witop-now">—</span> · 今日 +' + todayPlus() + '</div>'
       + '</div>'
   }
 
   function applyVariantVisual(v) {
-    document.querySelectorAll('#witop-abc-switcher button').forEach(function (btn) {
-      var isActive = btn.getAttribute('data-v') === v
-      btn.style.background = isActive ? '#2563eb' : 'transparent'
-      btn.style.color = isActive ? '#fff' : ''
-      if (isActive) {
-        btn.style.borderBottom = '2px solid #2563eb'
-      }
-    })
-    var map = { a: 'variant-a', b: 'variant-b', c: 'variant-c' }
-    Object.keys(map).forEach(function (k) {
-      var el = document.getElementById(map[k])
-      if (el) el.classList.toggle('hidden', k !== v)
-    })
+    // 仅 B 方案，无切换逻辑
+    var btn = document.querySelector('#witop-abc-switcher button')
+    if (btn) {
+      btn.style.background = '#2563eb'
+      btn.style.color = '#fff'
+      btn.style.borderBottom = '2px solid #2563eb'
+    }
   }
 
   function renderInto() {
-    var aEl = document.getElementById('variant-a')
     var bEl = document.getElementById('variant-b')
-    var cEl = document.getElementById('variant-c')
-    if (aEl && !aEl.dataset.rendered) { aEl.innerHTML = renderA(); aEl.dataset.rendered = '1' }
     if (bEl && !bEl.dataset.rendered) { bEl.innerHTML = renderB(); bEl.dataset.rendered = '1' }
-    if (cEl && !cEl.dataset.rendered) { cEl.innerHTML = renderC(); cEl.dataset.rendered = '1' }
+    // A/C 不再渲染，直接隐藏
+    var aEl = document.getElementById('variant-a')
+    var cEl = document.getElementById('variant-c')
+    if (aEl) aEl.classList.add('hidden')
+    if (cEl) cEl.classList.add('hidden')
   }
 
   function setVariant(v, opts) {
-    if (!['a', 'b', 'c'].includes(v)) v = 'a'
+    // 强制 B，忽略其他参数
+    v = 'b'
     var skipUrl = opts && opts.skipUrl
     var skipStorage = opts && opts.skipStorage
     var skipLog = opts && opts.skipLog
@@ -351,16 +401,8 @@
   }
 
   function getVariant() {
-    try {
-      var p = new URLSearchParams(location.search)
-      var v = p.get('v')
-      if (v && ['a', 'b', 'c'].includes(v)) return v
-    } catch (e) {}
-    try {
-      var s = localStorage.getItem('witop_abc_variant')
-      if (s && ['a', 'b', 'c'].includes(s)) return s
-    } catch (e) {}
-    return 'a'
+    // 始终返回 B
+    return 'b'
   }
 
   function mount() {
