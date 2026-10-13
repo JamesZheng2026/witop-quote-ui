@@ -133,6 +133,12 @@
     if (typeof window.renderReceptionWorkbench === 'function') {
       try { window.renderReceptionWorkbench() } catch (e) { console.warn('[reception-bridge] render failed:', e) }
     }
+    // Issue #9 Bug 1: 同步刷新 B 视图(首页工作台)统计与列表
+    // renderReceptionWorkbench 只更新工作台内 DOM;若用户当前在 dashboard(首页),
+    // 仍需让 B 视图重渲染,否则 REC 计数 / 状态卡牌保持旧值。
+    if (typeof window.witopRefreshBoard === 'function') {
+      try { window.witopRefreshBoard() } catch (e) { console.warn('[reception-bridge] board refresh failed:', e) }
+    }
     updateReceptionStepper(toUiState(current.businessState))
 
     return {
