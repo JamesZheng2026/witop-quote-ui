@@ -7,8 +7,10 @@ node scripts/test-state.js
 node reports/test-channel-preserve.cjs
 node <<'JS'
 const fs = require('node:fs');
+const path = require('node:path');
 const assert = require('node:assert/strict');
-const { JSDOM } = require('jsdom');
+// resolve jsdom from the repo-local reports/node_modules, not from cwd
+const { JSDOM } = require(require.resolve('jsdom', { paths: [path.resolve('reports/node_modules')] }));
 const html = fs.readFileSync('index.html', 'utf8');
 const source = fs.readFileSync('scripts/variants.js', 'utf8');
 assert(!/variant-a|variant-c|renderA|renderC/.test(html + source), 'No retired views');
@@ -18,7 +20,18 @@ const dom = new JSDOM(html, { runScripts: 'outside-only', url: 'http://localhost
 try {
   const w = dom.window;
   w.fetch = () => Promise.resolve({ ok: false });
-  w.eval(fs.readFileSync('scripts/mock-data.js', 'utf8'));
+  // mock-data.js uses `const MOCK_RECEPTION_DATA = [...]`, which is block-scoped
+  // and not exposed on `window` after w.eval. Parse the file ourselves so the
+  // verify script can read records deterministically.
+  const mockSrc = fs.readFileSync('scripts/mock-data.js', 'utf8');
+  w.eval(mockSrc);
+  const records = w.MOCK_RECEPTION_DATA || (() => {
+    // Fallback: pull the array out of the source via the module.exports block.
+    const m = mockSrc.match(/MOCK_RECEPTION_DATA\s*=\s*(\[[\s\S]*?\n\]);/);
+    if (!m) return [];
+    return new Function(`return (${m[1]});`)();
+  })();
+  w.MOCK_RECEPTION = records;
   w.eval(source);
   w.witopRenderVariants();
   const dashboard = w.document.getElementById('view-dashboard');
@@ -31,7 +44,6 @@ try {
     'QC parties label per James D1 final spec (third-stage)');
   assert(b.textContent.includes('AI 质检 · 品控终审'), 'Third-stage label per D1');
   assert.equal(b.querySelectorAll('.grid > div').length, 4, 'Four cards');
-  const records = w.MOCK_RECEPTION;
   assert.deepEqual([...new Set(records.map(r => r.qcStatus))].sort(),
     ['failed', 'in_review', 'passed', 'pending']);
   assert.equal(b.querySelectorAll('tbody tr').length, records.length);

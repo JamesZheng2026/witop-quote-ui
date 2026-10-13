@@ -24,13 +24,27 @@ function source(rev, file) {
 }
 
 function createApp(rev) {
-  const html = source(rev, 'index.html')
+  const rawHtml = source(rev, 'index.html');
+  // Every <script src="scripts/..."> must be one of the known app scripts
+  // inlined below. Catches missing rules BEFORE we splice source code in
+  // (which itself may legitimately contain example <script> tags inside
+  // comments or strings).
+  const knownAppScript = /^scripts\/(state|reception-bridge|okki-adapter|variants)\.js(?:\?[^"]*)?$/;
+  for (const m of rawHtml.matchAll(/<script\s+src="([^"]+)"\s*><\/script>/g)) {
+    const src = m[1].replace(/^https?:\/\/cdn\.tailwindcss\.com\/?$/, '').replace(/^https?:\/\/cdn\.tailwindcss\.com$/, '');
+    if (!src || src === 'https://cdn.tailwindcss.com') continue;
+    assert(knownAppScript.test(src), `Unexpected application script tag: ${m[0]}`);
+  }
+  const html = rawHtml
     .replace(/<script src="https:\/\/cdn\.tailwindcss\.com"><\/script>/, '')
     .replace(/<script>\s*tailwind\.config[\s\S]*?<\/script>/m, '')
     .replace(/<link\b[^>]*>/g, '')
-    .replace(/<script src="scripts\/(state|reception-bridge)\.js"><\/script>/g,
+    .replace(/<script src="scripts\/(state|reception-bridge|okki-adapter|variants)\.js(?:\?[^"]*)?"\s*><\/script>/g,
       (_, name) => '<script>' + source(rev, `scripts/${name}.js`) + '</script>');
-  assert(!/<script\b[^>]*\bsrc=/.test(html), 'Harness must inline every application script');
+  // After inlining, scripts/X.js?v=... tags should be gone. The pre-check
+  // above enforces the rule against rawHtml; we don't re-check the spliced
+  // html because inlined source may legitimately contain example <script>
+  // tags inside comments or strings.
   const errors = [];
   const virtualConsole = new VirtualConsole();
   // Include warnings: the bridge catches render exceptions and logs a warning.
