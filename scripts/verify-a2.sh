@@ -5,6 +5,8 @@ set -euo pipefail
 A2_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$A2_ROOT"
 mkdir -p reports
+# Self-clean: a2-validation.txt is a regenerable validation artifact (not source of truth)
+trap 'rm -f reports/a2-validation.txt' EXIT
 set +e
 node <<'JS' 2>&1 | tee reports/a2-validation.txt
 const fs = require('fs');
