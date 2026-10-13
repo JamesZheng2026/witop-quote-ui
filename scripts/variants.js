@@ -279,10 +279,24 @@
     return 'b'
   }
 
+  // Issue #9 Bug 1: 接待状态变化后,主动刷新 B 视图(首页工作台)的统计与列表
+  // 原来 renderInto() 依赖 bEl.dataset.rendered 幂等缓存,导致 REC-002 转人工后
+  // 首页状态不同步;这里暴露一个强制重渲染入口,reception-bridge 会调用。
+  function refreshBoard() {
+    var bEl = document.getElementById('variant-b')
+    var host = document.getElementById('witop-abc-host')
+    if (bEl) delete bEl.dataset.rendered
+    if (host) delete host.dataset.rendered
+    renderInto()
+    var now = document.getElementById('witop-now')
+    if (now) now.textContent = nowHHmm()
+  }
+
   // 暴露
   window.witopSetVariant = setVariant
   window.witopGetVariant = getVariant
   window.witopRenderVariants = renderInto
+  window.witopRefreshBoard = refreshBoard
   window.witopRenderSwitcher = function () {
     // 兼容 index.html 的工作台初始化入口
     renderInto()

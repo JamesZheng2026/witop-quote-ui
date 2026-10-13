@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scripts/verify-abc-views.sh
-# 验证 A/B/C 切换器、三容器存在、静态资源可访问
+# 验证 B 视图(原 A/B/C 切换器仅剩 B)+ 三容器中 B 存在 + 静态资源可访问
+# 2026-10-13 James 确认物理移除 A/C 后,本套件同步移除 A/C 断言
 # 在 http server 启动后跑 (默认 127.0.0.1:8765)
 set -euo pipefail
 
@@ -36,13 +37,11 @@ check() {
 
 echo "== verify-abc-views @ $BASE =="
 
-# 1. index.html 可访问且含切换器标记
+# 1. index.html 可访问且含 B 视图(已物理移除 A/C,James 2026-10-13 决定保留 B-only)
 HTML=$(curl -fsS "$BASE/index.html")
 check "index.html 200"               ""                "$HTML"
 check "含 witop-abc-host"            "witop-abc-host"  "$HTML"
-check "含 variant-a"                 "variant-a"       "$HTML"
 check "含 variant-b"                 "variant-b"       "$HTML"
-check "含 variant-c"                 "variant-c"       "$HTML"
 check "含 cache meta"                "no-cache"        "$HTML"
 check "含 state.js 带版本号"         "state.js?v="     "$HTML"
 
@@ -65,9 +64,10 @@ done
 
 VJS=$(curl -fsS "$BASE/scripts/variants.js")
 check "variants.js 含 setVariant" "function setVariant" "$VJS"
-check "variants.js 含 renderA"    "function renderA"    "$VJS"
 check "variants.js 含 renderB"    "function renderB"    "$VJS"
-check "variants.js 含 renderC"    "function renderC"    "$VJS"
+# Issue #9: 同步验证 Bug 1 修复的强制刷新入口
+check "variants.js 含 refreshBoard"    "function refreshBoard"    "$VJS"
+check "variants.js 暴露 witopRefreshBoard" "window.witopRefreshBoard" "$VJS"
 
 OJS=$(curl -fsS "$BASE/scripts/okki-adapter.js")
 check "okki-adapter 含 okkiAdapter" "window.okkiAdapter" "$OJS"

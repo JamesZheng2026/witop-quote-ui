@@ -59,6 +59,28 @@ try {
   w.witopSetVariant('a', { skipUrl: true, skipStorage: true, skipLog: true });
   assert.equal(w.witopGetVariant(), 'b');
   assert.equal(b.querySelectorAll('tbody tr').length, records.length, 'Stable rerender');
-  console.log('verify-b-only: PASS (structure, wording, QC states, REC-009, compatibility)');
+
+  // Issue #9 Bug 1 regression: 转人工后,首页 B 视图统计/列表必须同步刷新
+  assert.equal(typeof w.witopRefreshBoard, 'function', 'witopRefreshBoard exposed');
+  const rec002 = records.find(r => r.id === 'REC-002');
+  assert.ok(rec002, 'REC-002 seed present');
+  const statusBefore = rec002.receptionStatus;
+  rec002.receptionStatus = 'handoff';
+  w.witopRefreshBoard();
+  const rec002Cells = [...b.querySelectorAll('tbody tr')].find(
+    row => row.cells[0].textContent.trim() === 'REC-002'
+  );
+  assert.ok(rec002Cells, 'REC-002 row present in B after refresh');
+  // B 视图表头 8 列: 0 编号 / 1 客户 / 2 国家 / 3 分级 / 4 意向 / 5 状态 / 6 质检 / 7 更新
+  assert.equal(rec002Cells.cells[5].textContent.trim(), '转人工',
+    'B 视图 REC-002 状态列(index 5)同步刷新为 转人工');
+  // 顶部 4 卡: 询盘总数 / S·A 级 / 已发报价 / 质检通过; 切换 REC-002 后,
+  // "询盘总数"卡应 -1, "S / A 级"卡应 +1 (mock-data.js 已固定 11 条)
+  const cardLabels = [...b.querySelectorAll('.grid > div')].map(card => card.textContent);
+  assert.ok(cardLabels.some(t => t.includes('询盘总数')), '询盘总数卡存在');
+  assert.ok(cardLabels.some(t => t.includes('S / A 级')), 'S / A 级卡存在');
+  rec002.receptionStatus = statusBefore; // 还原,避免污染其他测试
+
+  console.log('verify-b-only: PASS (structure, wording, QC states, REC-009, compatibility, Issue#9 Bug1 sync)');
 } finally { dom.window.close(); }
 JS
