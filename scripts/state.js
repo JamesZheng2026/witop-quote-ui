@@ -14,7 +14,7 @@ const STATES = {
 const LABELS = {
   [STATES.RECEPTION_OPEN]: '接待中',
   [STATES.TRANSFER_HUMAN]: '转人工',
-  [STATES.HUMAN_TAKEOVER]: '人工已接手',
+  [STATES.HUMAN_TAKEOVER]: '人工',
   [STATES.BLOCKED]: '已拦截'
 }
 
