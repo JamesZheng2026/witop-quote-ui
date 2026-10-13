@@ -700,7 +700,7 @@
     <div id="view-reception-workbench" class="view p-6 hidden" data-v3="view">
       <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 class="text-xl font-bold text-slate-900 dark:text-white">接待工作台 <span class="text-xs font-normal text-amber-600 dark:text-amber-400 ml-2" data-v3="mock-badge">(Mock 演示数据)</span></h1>
+          <h1 class="text-xl font-bold text-slate-900 dark:text-white">接待工作台 <span class="text-xs font-normal text-amber-600 dark:text-amber-400 ml-2" data-v3="mock-badge">演示数据 (Mock)</span></h1>
           <p class="text-sm text-slate-500 mt-0.5">四段看板：接待中 / 转人工 / 人工已接手 / 已拦截 — 点击查看详情</p>
         </div>
         <div class="flex flex-wrap gap-2 text-xs text-slate-500">
@@ -769,7 +769,7 @@
           </table>
         </div>
       </div>
-      <div class="text-sm text-slate-500 mt-2" id="reception-empty" data-v3="empty" hidden>当前 Tab 没有客户 — 演示数据为空时占位文案。</div>
+      <div class="text-sm text-slate-500 mt-2" id="reception-empty" data-v3="empty" hidden>当前分类暂无客户。</div>
       <div class="text-sm text-slate-500 mt-2" id="reception-count" data-v3="count"></div>
     </div>
 
@@ -782,15 +782,15 @@
         <h2 class="text-lg font-bold text-slate-900 dark:text-white" id="reception-drawer-title" data-v3="drawer-title">接待详情</h2>
         <p class="text-xs text-slate-500 mt-1" id="reception-drawer-subtitle" data-v3="drawer-subtitle">客户标识 · 来源 · 状态</p>
       </div>
-      <button type="button" class="btn btn-secondary btn-sm" onclick="closeReceptionDetail()" aria-label="Close reception detail" data-v3="drawer-close">关闭</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="closeReceptionDetail()" aria-label="关闭接待详情" data-v3="drawer-close">关闭</button>
     </div>
 
     <!-- Top: Summary + Suggested actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-5" id="reception-drawer-top" data-v3="drawer-top">
       <div class="card p-4 border-l-4 border-blue-500" id="reception-summary-card" data-v3="summary">
         <div class="panel-section-title">AI 概要</div>
-        <p class="text-sm text-slate-700 dark:text-slate-200" id="reception-summary-text" data-v3="summary-text">Mock 概要</p>
-        <div class="text-xs text-amber-600 dark:text-amber-400 mt-2" data-v3="summary-mock-badge">(Mock)</div>
+        <p class="text-sm text-slate-700 dark:text-slate-200" id="reception-summary-text" data-v3="summary-text">暂无概要</p>
+        <div class="text-xs text-amber-600 dark:text-amber-400 mt-2" data-v3="summary-mock-badge">演示数据 (Mock)</div>
       </div>
       <div class="card p-4" id="reception-actions-card" data-v3="actions">
         <div class="panel-section-title">建议下一步操作</div>
@@ -814,15 +814,15 @@
         <button type="button" class="tab-btn" id="reception-channel-tab-backtrace" data-v3="channel-tab" data-channel="backtrace" onclick="setReceptionChannel('backtrace')">AI 背调</button>
       </div>
       <div class="card p-5" id="reception-channel-pane-email" data-v3="channel-pane" data-channel="email">
-        <div class="panel-section-title">邮件记录 (Mock)</div>
+        <div class="panel-section-title">邮件记录 · 演示 (Mock)</div>
         <div id="reception-channel-email-body" class="text-sm text-slate-600 dark:text-slate-300 space-y-2"></div>
       </div>
       <div class="card p-5 hidden" id="reception-channel-pane-whatsapp" data-v3="channel-pane" data-channel="whatsapp">
-        <div class="panel-section-title">WhatsApp 记录 (Mock)</div>
+        <div class="panel-section-title">WhatsApp 记录 · 演示 (Mock)</div>
         <div id="reception-channel-whatsapp-body" class="text-sm text-slate-600 dark:text-slate-300 space-y-2"></div>
       </div>
       <div class="card p-5 hidden" id="reception-channel-pane-backtrace" data-v3="channel-pane" data-channel="backtrace">
-        <div class="panel-section-title">AI 背调 (Mock)</div>
+        <div class="panel-section-title">AI 背调 · 演示 (Mock)</div>
         <div id="reception-channel-backtrace-body" class="text-sm text-slate-600 dark:text-slate-300 space-y-2"></div>
       </div>
     </div>
@@ -1775,59 +1775,59 @@ const RECEPTION_REQUIREMENT_FIELDS = ['qty', 'usage', 'cycle', 'customization', 
 const MOCK_RECEPTION = [
   // ---- 接待中 (5) ----
   {
-    id: 'REC-001', company: 'Atlas Bay Holdings', country: 'UAE', channel: 'email', receptionStatus: 'reception',
-    lastContactAt: '2026-10-11 09:42', qty: '3,200 sqm', usage: 'Commercial tower lobby', cycle: '60 days',
-    customization: 'Custom walnut color + matching trim', overseasMode: 'Importer / wholesaler',
+    id: 'REC-001', company: 'Atlas Bay Holdings', country: '阿联酋', channel: 'email', receptionStatus: 'reception',
+    lastContactAt: '2026-10-11 09:42', qty: '3,200 平方米', usage: '商业楼宇大堂', cycle: '60 天',
+    customization: '定制胡桃木色 + 配套收边条', overseasMode: '进口商 / 批发商',
     summary: '买家倾向 8mm 共挤板，需要 60 天内交付，目的港 Jebel Ali。已确认数量与用途，等待报价。',
     needsHandoff: false
   },
   {
-    id: 'REC-002', company: 'Northwind Interiors', country: 'UK', channel: 'mixed', receptionStatus: 'reception',
-    lastContactAt: '2026-10-11 11:18', qty: '1,500 sqm', usage: 'Hotel guest-room renovation', cycle: '45 days',
+    id: 'REC-002', company: 'Northwind Interiors', country: '英国', channel: 'mixed', receptionStatus: 'reception',
+    lastContactAt: '2026-10-11 11:18', qty: '1,500 平方米', usage: '酒店客房翻新', cycle: '45 天',
     customization: '—', overseasMode: '—',
     summary: '酒店翻新项目，预算偏紧；待收集定制需求与海外经营模式。建议下一步：发送初步报价。',
     needsHandoff: false
   },
   {
-    id: 'REC-003', company: 'Greenline Trading FZE', country: 'UAE', channel: 'whatsapp', receptionStatus: 'reception',
+    id: 'REC-003', company: 'Greenline Trading FZE', country: '阿联酋', channel: 'whatsapp', receptionStatus: 'reception',
     lastContactAt: '2026-10-11 12:05', qty: '待收集', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: 'WhatsApp 来询，缺基础字段。建议下一步：礼貌回访补全采购数量与用途。',
     needsHandoff: false
   },
   {
-    id: 'REC-004', company: 'Riyadh Stone & Decor', country: 'Saudi Arabia', channel: 'email', receptionStatus: 'reception',
-    lastContactAt: '2026-10-10 16:30', qty: '500 sqm', usage: '—', cycle: '—',
+    id: 'REC-004', company: 'Riyadh Stone & Decor', country: '沙特阿拉伯', channel: 'email', receptionStatus: 'reception',
+    lastContactAt: '2026-10-10 16:30', qty: '500 平方米', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '首次来询；用途/周期未确认。建议下一步：自动回访模板 + AI 背调。',
     needsHandoff: false
   },
   {
-    id: 'REC-005', company: 'Cairo Decorative Panels', country: 'Egypt', channel: 'mixed', receptionStatus: 'reception',
-    lastContactAt: '2026-10-10 14:11', qty: '4,200 sqm', usage: 'Government project · payment via LC', cycle: '90 days',
-    customization: 'SGS inspection required', overseasMode: 'Government procurement',
+    id: 'REC-005', company: 'Cairo Decorative Panels', country: '埃及', channel: 'mixed', receptionStatus: 'reception',
+    lastContactAt: '2026-10-10 14:11', qty: '4,200 平方米', usage: '政府项目 · 信用证（LC）付款', cycle: '90 天',
+    customization: '需要 SGS 检验', overseasMode: '政府采购',
     summary: '历史老客户；本周复访谈细节。建议下一步：发送正式 SGS 合规报价。',
     needsHandoff: false
   },
 
   // ---- 转人工 (3) ----
   {
-    id: 'REC-006', company: 'Hanoi Construction Materials', country: 'Vietnam', channel: 'whatsapp', receptionStatus: 'handoff',
-    lastContactAt: '2026-10-11 10:55', qty: '300 sqm', usage: 'Sample order · interior design showcase', cycle: '21 days',
-    customization: 'Matte black + custom edging', overseasMode: '—',
+    id: 'REC-006', company: 'Hanoi Construction Materials', country: '越南', channel: 'whatsapp', receptionStatus: 'handoff',
+    lastContactAt: '2026-10-11 10:55', qty: '300 平方米', usage: '样品订单 · 室内设计展示', cycle: '21 天',
+    customization: '哑光黑 + 定制收边', overseasMode: '—',
     summary: '客诉倾向高（议价 + 期望快速样品），AI 已触发转人工。等待销售 James 接手。',
     needsHandoff: true, handoffReason: '议价激烈 + 期望样品加速'
   },
   {
-    id: 'REC-007', company: 'Pacific Coast Flooring', country: 'USA', channel: 'email', receptionStatus: 'handoff',
-    lastContactAt: '2026-10-11 08:20', qty: '3,200 sqm', usage: 'Residential SPC project', cycle: '45 days',
-    customization: 'Click system, Grey Oak', overseasMode: 'Distributor',
+    id: 'REC-007', company: 'Pacific Coast Flooring', country: '美国', channel: 'email', receptionStatus: 'handoff',
+    lastContactAt: '2026-10-11 08:20', qty: '3,200 平方米', usage: '住宅 SPC 地板项目', cycle: '45 天',
+    customization: '锁扣系统、灰橡木色', overseasMode: '分销商',
     summary: '美国分销商；要求 SGS + 样品，AI 转人工等销售评估区域风险。',
     needsHandoff: true, handoffReason: '区域风险评估'
   },
   {
-    id: 'REC-008', company: 'Lagos Premium Interiors', country: 'Nigeria', channel: 'mixed', receptionStatus: 'handoff',
-    lastContactAt: '2026-10-10 22:48', qty: '400 sqm', usage: 'Hotel lobby decoration', cycle: '—',
+    id: 'REC-008', company: 'Lagos Premium Interiors', country: '尼日利亚', channel: 'mixed', receptionStatus: 'handoff',
+    lastContactAt: '2026-10-10 22:48', qty: '400 平方米', usage: '酒店大堂装饰', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '缺关键字段（周期 / 海外经营模式），AI 转人工等销售直接对接。',
     needsHandoff: true, handoffReason: '关键信息缺失'
@@ -1835,48 +1835,48 @@ const MOCK_RECEPTION = [
 
   // ---- 人工已接手 (3) ----
   {
-    id: 'REC-009', company: 'Kingfisher Supplies Ltd', country: 'UK', channel: 'email', receptionStatus: 'handled',
-    lastContactAt: '2026-10-11 07:05', qty: '1,800 sqm', usage: 'Hotel fit-out', cycle: '21 days',
-    customization: '12mm High Gloss White', overseasMode: 'UK retailer',
+    id: 'REC-009', company: 'Kingfisher Supplies Ltd', country: '英国', channel: 'email', receptionStatus: 'handled',
+    lastContactAt: '2026-10-11 07:05', qty: '1,800 平方米', usage: '酒店装修', cycle: '21 天',
+    customization: '12mm 高光白色', overseasMode: '英国零售商',
     summary: '人工已接手：销售已发出 21 天加急方案，等待客户回复。',
     needsHandoff: false, handledBy: 'James Zheng'
   },
   {
-    id: 'REC-010', company: 'Manila Hardware Corp', country: 'Philippines', channel: 'whatsapp', receptionStatus: 'handled',
-    lastContactAt: '2026-10-10 18:33', qty: '2,000 sqm', usage: 'Residential complex', cycle: '30 days',
-    customization: 'UV Coating Natural Oak', overseasMode: 'Reseller',
+    id: 'REC-010', company: 'Manila Hardware Corp', country: '菲律宾', channel: 'whatsapp', receptionStatus: 'handled',
+    lastContactAt: '2026-10-10 18:33', qty: '2,000 平方米', usage: '住宅小区', cycle: '30 天',
+    customization: 'UV 涂层、天然橡木色', overseasMode: '经销商',
     summary: '已转销售并完成规格确认，等待 PI 出具。',
     needsHandoff: false, handledBy: 'James Zheng'
   },
   {
-    id: 'REC-011', company: 'Bavaria Baustoffe GmbH', country: 'Germany', channel: 'email', receptionStatus: 'handled',
-    lastContactAt: '2026-10-10 11:14', qty: '8,000 sqm', usage: 'Apartment complex', cycle: '75 days',
-    customization: 'CE-marked SPC, Click system', overseasMode: 'EU distributor',
+    id: 'REC-011', company: 'Bavaria Baustoffe GmbH', country: '德国', channel: 'email', receptionStatus: 'handled',
+    lastContactAt: '2026-10-10 11:14', qty: '8,000 平方米', usage: '公寓小区', cycle: '75 天',
+    customization: 'CE 认证 SPC 地板、锁扣系统', overseasMode: '欧盟分销商',
     summary: '大单 — 销售已分段排产 + CE 文档准备中。',
     needsHandoff: false, handledBy: 'James Zheng'
   },
 
   // ---- 已拦截 (3) ----
   {
-    id: 'REC-012', company: 'Spam Sender — Invest.co', country: 'unknown', channel: 'email', receptionStatus: 'blocked',
+    id: 'REC-012', company: 'Spam Sender — Invest.co', country: '未知', channel: 'email', receptionStatus: 'blocked',
     lastContactAt: '2026-10-11 06:12', qty: '—', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '拦截原因：邮件来源被标记为批量推广模板，建议持续拦截。',
-    needsHandoff: false, blockedReason: 'Bulk promotional template'
+    needsHandoff: false, blockedReason: '批量推广模板'
   },
   {
-    id: 'REC-013', company: 'Coin-Bot / Trade Crypto Signals', country: 'unknown', channel: 'whatsapp', receptionStatus: 'blocked',
+    id: 'REC-013', company: 'Coin-Bot / Trade Crypto Signals', country: '未知', channel: 'whatsapp', receptionStatus: 'blocked',
     lastContactAt: '2026-10-11 03:50', qty: '—', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '拦截原因：来自非白名单号段，含加密/资金类话术。',
-    needsHandoff: false, blockedReason: 'Off-whitelist crypto/finance chatter'
+    needsHandoff: false, blockedReason: '非白名单来源的加密货币 / 金融推广信息'
   },
   {
-    id: 'REC-014', company: 'Generic Africa Importer', country: 'Egypt', channel: 'email', receptionStatus: 'blocked',
+    id: 'REC-014', company: 'Generic Africa Importer', country: '埃及', channel: 'email', receptionStatus: 'blocked',
     lastContactAt: '2026-10-10 17:00', qty: '—', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '拦截原因：买家背景检查未通过（公司域名注册 < 90 天）。',
-    needsHandoff: false, blockedReason: 'Domain age < 90 days, AI back-trace failed'
+    needsHandoff: false, blockedReason: '域名注册不足 90 天，AI 背调未通过'
   }
 ];
 
@@ -1995,7 +1995,7 @@ function renderReceptionWorkbench() {
   const rows = receptionList(receptionActiveTab);
   const tbody = document.getElementById('reception-table-body');
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 text-sm">当前 Tab 没有客户</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 text-sm">当前分类暂无客户</td></tr>';
   } else {
     tbody.innerHTML = rows.map(r => `
       <tr data-record-id="${escHtml(r.id)}">
@@ -2041,7 +2041,7 @@ function receptionForwardHandoff(id) {
   if (!rec) return;
   rec.receptionStatus = 'handoff';
   rec.needsHandoff = true;
-  rec.handoffReason = rec.handoffReason || 'Manual forward from reception list';
+  rec.handoffReason = rec.handoffReason || '从接待列表手动转人工';
   renderReceptionWorkbench();
 }
 
@@ -2078,23 +2078,23 @@ function renderReceptionChannelBody(record, channel) {
       '主题：' + escHtml(record.company) + ' 询价跟进 #' + escHtml(record.id),
       '来自：sales.demo@witopdecor.com',
       '正文：感谢您的询价 ' + escHtml(record.company) + '，我们已收到您的需求 ' + escHtml(record.qty || '待收集') +
-        '，将在 24 小时内回复报价草案。(Mock 邮件 — 不代表真实对话)',
+        '，将在 24 小时内回复报价草案。（演示邮件，不代表真实对话）',
       '时间：' + escHtml(record.lastContactAt)
     ].map(line => '<div>' + line + '</div>').join('');
   }
   if (channel === 'whatsapp') {
     return [
       '会话：' + escHtml(record.company),
-      '对方：您好，请问 WPC wall panel 可以做 8mm 共挤吗？',
+      '对方：您好，请问 WPC 墙板可以做 8mm 共挤吗？',
       'AI：请确认数量、目的地、颜色偏好。',
-      '时间：' + escHtml(record.lastContactAt) + ' (Mock)'
+      '时间：' + escHtml(record.lastContactAt) + '（演示记录）'
     ].map(line => '<div>' + line + '</div>').join('');
   }
   // AI 背调 (backtrace)
   return [
-    'AI 背调 (Mock)：',
+    'AI 背调 · 演示 (Mock)：',
     '· 公司域名：' + escHtml(record.country ? record.country : '未提供') + ' / 注册时间未知',
-    '· 邮箱历史：无外部 spam 标记',
+    '· 邮箱历史：无外部垃圾信息标记',
     '· 关联风险：' + (record.blockedReason ? escHtml(record.blockedReason) : '无'),
     '· 建议：' + (record.needsHandoff ? '建议立即转人工' : '建议继续 AI 接待')
   ].map(line => '<div>' + line + '</div>').join('');
@@ -2112,7 +2112,7 @@ function openReceptionDetail(id) {
     '<span class="status-dot" style="background:' + receptionStatusDotColor(record.receptionStatus) + '"></span> ' +
     receptionReceptionStatusLabel(record.receptionStatus);
 
-  document.getElementById('reception-summary-text').textContent = record.summary || 'Mock 概要';
+  document.getElementById('reception-summary-text').textContent = record.summary || '暂无概要';
 
   // Actions list (mock buttons — all annotated with (Mock))
   const actions = document.getElementById('reception-actions-list');
@@ -2123,7 +2123,7 @@ function openReceptionDetail(id) {
   ];
   actions.innerHTML = actionRows.map(a => {
     const disabled = a.disabled ? 'disabled' : '';
-    return '<button type="button" class="btn btn-secondary btn-sm" ' + disabled + '>' + escHtml(a.label) + ' <span class="text-amber-600 ml-1">(Mock)</span></button>';
+    return '<button type="button" class="btn btn-secondary btn-sm" ' + disabled + '>' + escHtml(a.label) + ' <span class="text-amber-600 ml-1">演示 (Mock)</span></button>';
   }).join('');
 
   // Requirements grid
