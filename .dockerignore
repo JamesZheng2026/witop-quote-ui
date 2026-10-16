@@ -1,0 +1,13 @@
+# Deny by default, including ignored/untracked secrets and Git worktree metadata.
+**
+!Dockerfile
+!index.html
+!scripts/
+scripts/**
+!scripts/server.js
+!scripts/sqlserver-bridge.js
+!scripts/state.js
+!scripts/reception-bridge.js
+!scripts/okki-adapter.js
+!scripts/variants.js
+!scripts/build-info.json

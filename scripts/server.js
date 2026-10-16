@@ -24,15 +24,20 @@ function createServer({ query = querySqlServer } = {}) {
     let url;
     try { url = new URL(req.url, 'http://' + host); }
     catch { return json(400, { error: 'INVALID_URL' }); }
-    if (url.pathname === '/api/receptions') {
+    const health = url.pathname === '/healthz';
+    if (health || url.pathname === '/api/receptions') {
       // One bounded shared query at a time. Refreshes do not spawn unbounded DB clients.
       try {
         if (!pending) pending = Promise.resolve().then(() => query({ limit: 50 })).finally(() => { pending = null; });
-        return json(200, await pending);
+        const result = await pending;
+        if (!health) return json(200, result);
+        if (result.ok !== true || result.source !== 'sqlserver') throw new Error('SQL_BRIDGE_INVALID_RESPONSE');
+        return json(200, { ok: true, source: 'sqlserver', ts: new Date().toISOString() });
       } catch (error) {
         const allowed = new Set(['SQL_CONNECT_FAILED', 'SQL_DRIVER_MISSING', 'SQL_CONFIG_MISSING', 'SQL_MAPPING_REQUIRED',
           'SQL_SCHEMA_AMBIGUOUS', 'SQL_QUERY_FAILED', 'SQL_BRIDGE_FAILED', 'SQL_BRIDGE_INVALID_RESPONSE']);
-        return json(503, { source: 'sqlserver', error: allowed.has(error.message) ? error.message : 'SQL_QUERY_FAILED' });
+        return json(503, { ...(health ? { ok: false, ts: new Date().toISOString() } : {}),
+          source: 'sqlserver', error: allowed.has(error.message) ? error.message : 'SQL_QUERY_FAILED' });
       }
     }
     const file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);

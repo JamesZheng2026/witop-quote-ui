@@ -9,3 +9,17 @@ reports/node_modules/
 /V3-01b_*.md
 /scripts/run-visual.sh
 reports/package-lock.json.local-backup
+
+# Production secrets stay external; examples contain names/placeholders only.
+.env
+.env.*
+!.env.production.example
+**/sqlserver_config*.json
+**/sqlserver-config*.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*htpasswd*
+/secrets/
+/certs/
