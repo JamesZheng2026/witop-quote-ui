@@ -28,22 +28,22 @@ docker compose --project-name witop-production --env-file .env.production images
 
 ## 3. 校验来源与实际内容
 
-在目标云主机/监控端，以已批准的域名运行；下面 `reception.witop.com` 仍须在首次部署前确认。`WITOP_CURL_AUTH_FILE` 指向仓库外权限 0600 的 curl 用户认证配置，不能在命令行写密码。
+在目标主机本地运行下列 HTTP 80 检查；远端监控经 VPN 使用 `http://<内网IP>:80`，或通过 SSH 隧道转发。B 方案无需域名或 TLS；若使用非默认端口，必须同步替换 URL。`WITOP_CURL_AUTH_FILE` 指向仓库外权限 0600 的 curl 用户认证配置，不能在命令行写密码。
 
 ```sh
-curl --fail --silent --show-error https://reception.witop.com/healthz \
+curl --fail --silent --show-error http://127.0.0.1:80/healthz \
   | jq -e '.ok == true and .source == "sqlserver" and (.ts | type == "string")'
-curl --config "$WITOP_CURL_AUTH_FILE" --fail --silent --show-error https://reception.witop.com/api/receptions \
+curl --config "$WITOP_CURL_AUTH_FILE" --fail --silent --show-error http://127.0.0.1:80/api/receptions \
   | jq -e '.ok == true and .source == "sqlserver" and (.records | type == "array") and (.records | length <= 50)'
 docker compose --project-name witop-production --env-file .env.production exec -T app node scripts/sqlserver-bridge.js
 ```
 
 必须继续做内容抽样：授权审核员在认证页面选至少 3 个会话，逐一核对归属、消息数、时间、最新消息与授权 SQL 结果；确认新鲜数据，不能只检查 `source` 字符串。记录样本数及通过/差异，不把客户内容或标识写进日志/卡片。
 
-持续 5 分钟、每 30 秒检查一次健康（含首尾 11 次），确认 `source: sqlserver`、无 503、容器 healthy、首页可用、静态资源正常、未认证 API 是 401、非白名单 Origin 是 403、HTTP 首页跳转 HTTPS。循环和 TLS 验收细节见 [DEPLOY.md](../../DEPLOY.md)。将实际运行的 app Image ID/digest 与上一步稳定镜像核对；单有 `images` 中的标签不足以证明内容一致。
+持续 5 分钟、每 30 秒检查一次健康（含首尾 11 次），确认 `source: sqlserver`、无 503、容器 healthy、首页可用、静态资源正常、未认证 API 是 401、非同源 Origin 是 403、认证后 HTTP 首页直接返回 200 且没有 HTTPS 跳转或 HSTS。循环和 HTTP 验收细节见 [DEPLOY.md](../../DEPLOY.md)。将实际运行的 app Image ID/digest 与上一步稳定镜像核对；单有 `images` 中的标签不足以证明内容一致。
 
 ## 4. 失败处理与记录
 
-健康或内容验收失败：停止后续发布，不标记回滚成功；检查脱敏错误码、挂载可读性、数据库网络、TLS/认证文件和 Nginx 上游解析。凭证/数据库故障不会由镜像回滚自动修复。不要恢复到未经验证的新镜像，不修改真实秘密来做测试。
+健康或内容验收失败：停止后续发布，不标记回滚成功；检查脱敏错误码、挂载可读性、数据库网络、VPN/SSH 访问路径与认证文件和 Nginx 上游解析。凭证/数据库故障不会由镜像回滚自动修复。不要恢复到未经验证的新镜像，不修改真实秘密来做测试。
 
 向 Hermes 提交旧/目标/实际运行 digest、配置 SHA、开始结束时间、停机时间、五分钟健康结果、API/业务抽样结论及剩余风险，走 review 后再结束事件。不得自动 merge、自动发布或清理旧镜像。

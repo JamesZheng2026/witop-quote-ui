@@ -1,5 +1,45 @@
 # t_bf11da40 本地交付与验证记录
 
+## 2026-10-16 B 方案：纯 HTTP 内网（当前交付）
+
+James 已确认 B：无需域名或 TLS，访问经过 VPN/SSH。以下历史章节记录此前各轮结果；其中域名/TLS 发布条件已由本节及当前 DEPLOY.md 替代。
+
+- 本轮使用群授权目录内的独立 clone `deploy-b-http-checkout`，分支 `wt/t_bf11da40`，从远端 `d7e6d6f6516179a71dfcb3558de2af54fef98224` 接续；原 worktree、main、launchd 与真实 SQL 配置未操作。
+- Nginx 仅监听 HTTP 80，`server_name _`；删除 TLS、HSTS 和 HTTPS 跳转。保留 Basic Auth，`/healthz` 免认证；有 Origin 时要求与当前 HTTP authority（含端口）一致，拒绝跨站 Fetch。
+- Compose 仅发布 HTTP，默认 `127.0.0.1:80`；远端只绑定 VPN/内网地址，配合访问限制。删除证书挂载、HTTPS 变量和域名健康检查 Host。app 8765 不发布，SQL 和认证文件继续从仓库外只读挂载。
+- 本轮仅修改六个部署配置/文档文件；Node 22.23.3 镜像声明及业务代码保持此前状态。下文 Node 22 宿主机与真实 SQL 结果为此前记录，本轮未重跑真实 SQL。
+
+本轮实际命令及结果：
+
+```text
+$ node docs/deploy/test-healthz.cjs --listen
+PASS ephemeral HTTP: success + SQL failure + unchanged API
+PASS healthz: 72 assertions (fixtures; real SQL/container readiness unverified)
+
+$ bash -euo pipefail -c 'for f in scripts/*.sh; do bash --noprofile --norc -n "$f"; done; for f in scripts/*.js reports/*.cjs docs/deploy/*.cjs; do node --check "$f"; done; git diff --check; echo "PASS shell/JS syntax and git diff --check"'
+PASS shell/JS syntax and git diff --check
+
+$ python3 # PyYAML + deployment structure checks
+PASS Compose YAML, HTTP-only ports, required env, read-only mounts and deployment references
+```
+
+上述 Python 检查只验证 YAML 结构与配置关系，不等于 Compose/Nginx 原生解析。当前环境没有 Docker/Nginx，未构建镜像、未启动 Nginx，HTTP 同源/认证运行行为、容器真实 SQL、大小、冷启动、五分钟健康和回滚均待目标环境验收。`visual_skipped=true`。
+
+当前验收入口（在部署主机本地，或经 SSH 转发后；VPN 客户端替换为已批准内网 IP）：
+
+```sh
+set -euo pipefail
+curl --fail --silent --show-error http://127.0.0.1:80/healthz \
+  | jq -e '.ok == true and .source == "sqlserver"'
+curl --config "$WITOP_CURL_AUTH_FILE" --fail --silent --show-error \
+  http://127.0.0.1:80/api/receptions \
+  | jq -e '.ok == true and .source == "sqlserver" and (.records | type == "array")'
+```
+
+端口冲突时可设置 `HTTP_PORT=8912`，并同步修改验收 URL。生产主机和 VPN/SSH 路径仍待提供；现有 CI 仅 lint/回归，没有镜像构建或自动部署 job。使用追加 commit 更新草稿 PR #12，不 amend、不 force-push、不合并或部署。
+
+## 历史交付记录
+
 日期：2026-10-16（Asia/Shanghai）。本地部署草案已写入；**生产部署验收未完成**。
 
 ## 工作区与范围
