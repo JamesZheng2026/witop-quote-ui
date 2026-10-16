@@ -1,0 +1,82 @@
+name: witop-production
+
+services:
+  app:
+    image: ${WITOP_APP_IMAGE:?Set WITOP_APP_IMAGE to an immutable tag or digest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # SQLSERVER_CONFIG is a FILE PATH, not inline JSON or credentials.
+      SQLSERVER_CONFIG: ${SQLSERVER_CONFIG:?Set SQLSERVER_CONFIG to /run/secrets/sqlserver_config.json}
+    volumes:
+      - type: bind
+        source: ${SQLSERVER_CONFIG_FILE:?Set the external host SQL config file path}
+        target: /run/secrets/sqlserver_config.json
+        read_only: true
+        bind:
+          create_host_path: false
+    expose:
+      - "8765"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  nginx:
+    image: ${NGINX_IMAGE:?Set NGINX_IMAGE to an approved tag or digest}
+    # Skip the official image's config-writing entrypoint on a read-only rootfs.
+    entrypoint: [nginx]
+    command: [-g, "daemon off;"]
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      # Loopback defaults allow isolated acceptance without touching local 8765.
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8912}:80"
+      - "${HTTPS_BIND:-127.0.0.1}:${HTTPS_PORT:-9443}:443"
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${TLS_CERT_DIR:?Set external TLS directory with fullchain.pem and privkey.pem}
+        target: /etc/nginx/tls
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${NGINX_AUTH_FILE:?Set external htpasswd file path}
+        target: /etc/nginx/auth/htpasswd
+        read_only: true
+        bind: {create_host_path: false}
+    healthcheck:
+      test: [CMD, wget, -q, -T, "35", -O, /dev/null, "--header=Host: reception.witop.com", "http://127.0.0.1/healthz"]
+      interval: 60s
+      timeout: 40s
+      start_period: 40s
+      retries: 3
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=32m,mode=1777
+      - /var/run:size=1m,mode=755
+      - /tmp:size=8m,mode=1777
+    security_opt: [no-new-privileges:true]
+    networks: [backend]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+networks:
+  # App needs outbound routing to SQL Server. Never publish its 8765 port.
+  backend:
+    driver: bridge
