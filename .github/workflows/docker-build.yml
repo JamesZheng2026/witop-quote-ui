@@ -1,0 +1,106 @@
+name: Docker build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and load Node 22 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: witop-quote-ui:ci-${{ github.sha }}
+
+      - name: Smoke test (HTTP 503 means SQL is unconfigured)
+        timeout-minutes: 2
+        env:
+          IMAGE: witop-quote-ui:ci-${{ github.sha }}
+          EVIDENCE: ${{ runner.temp }}/docker-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE"
+          docker image inspect --format '{{.Size}}' "$IMAGE" > "$EVIDENCE/image-size-bytes.txt"
+          started="$(python3 -c 'import time; print(time.monotonic())')"
+          docker run --rm -d -p 8080:8765 --name ci-test \
+            -e SQLSERVER_CONFIG='{}' "$IMAGE"
+          sleep 8
+          # Do not use curl -f: the expected 503 must be captured and asserted.
+          status="$(curl --silent --show-error --max-time 30 \
+            --output "$EVIDENCE/healthz.json" --write-out '%{http_code}' \
+            http://127.0.0.1:8080/healthz)"
+          printf '%s\n' "$status" | tee "$EVIDENCE/healthz-status.txt"
+          python3 - "$started" "$status" <<'PY'
+          import json
+          import os
+          import sys
+          import time
+          from pathlib import Path
+
+          elapsed = time.monotonic() - float(sys.argv[1])
+          evidence = Path(os.environ['EVIDENCE'])
+          size = int((evidence / 'image-size-bytes.txt').read_text())
+          metrics = {
+              'image_size_bytes': size,
+              'image_size_kb': round(size / 1000, 3),
+              'cold_start_observed_seconds': round(elapsed, 3),
+              'initial_wait_seconds': 8,
+              'http_status': int(sys.argv[2]),
+          }
+          # Observed time includes the mandated 8s wait; it is not minimum readiness time.
+          (evidence / 'metrics.json').write_text(json.dumps(metrics, indent=2) + '\n')
+          print(json.dumps(metrics))
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f"Image size: {metrics['image_size_kb']} KB (1000 bytes/KB)\n\n")
+              summary.write(f"Startup to observed HTTP {metrics['http_status']}: {elapsed:.3f}s "
+                            '(includes the fixed 8s wait; not minimum readiness time)\n')
+          assert metrics['http_status'] == 503, f"Expected HTTP 503, got {sys.argv[2]}"
+          body = json.loads((evidence / 'healthz.json').read_text())
+          assert body.get('ok') is False and body.get('source') == 'sqlserver', body
+          assert body.get('error') == 'SQL_CONFIG_MISSING', body
+          print('PASS: /healthz returned HTTP 503 with SQL_CONFIG_MISSING')
+          PY
+
+      - name: Collect container logs and stop
+        if: ${{ always() }}
+        env:
+          EVIDENCE: ${{ runner.temp }}/docker-smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EVIDENCE"
+          if docker container inspect ci-test > /dev/null 2>&1; then
+            trap 'docker stop ci-test' EXIT
+            docker logs ci-test > "$EVIDENCE/docker-logs.txt" 2>&1
+            cat "$EVIDENCE/docker-logs.txt"
+          else
+            printf '%s\n' 'ci-test is absent; see the build/smoke step failure.' \
+              > "$EVIDENCE/docker-logs.txt"
+          fi
+
+      - name: Upload container logs and smoke evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/docker-smoke/
+          if-no-files-found: error
