@@ -15,7 +15,7 @@
 
 | 文件 | 作用 |
 | --- | --- |
-| `Dockerfile` | Node 18 + Python 3.11 + pymssql 2.3.13；三阶段；UID/GID 10001；容器专用 bind 与健康探针 |
+| `Dockerfile` | Node 22.23.3（固定 manifest digest）+ Python 3.11 + pymssql 2.3.13；三阶段；UID/GID 10001；容器专用 bind 与健康探针 |
 | `docker-compose.yml` | app + Nginx；env-file 变量解析；外部只读 SQL/TLS/认证挂载；app 不占宿主机 8765 |
 | `.env.production.example` | 所有部署可配置变量及验收 curl 路径的空模板，无真实值 |
 | `.dockerignore` | 构建上下文默认排除、逐文件开放；scripts 目录开放后再次排除其内容再逐个开放 |
@@ -100,4 +100,43 @@ Error: listen EPERM: operation not permitted 127.0.0.1
 
 Hermes/运维在有 Docker 的授权隔离环境中，确认真实域名、证书与访问认证，提供外部只读 SQL 配置挂载；按 DEPLOY.md 完成原生解析、构建、字节数、冷启动、Nginx curl/认证/CORS、真实 SQL 内容抽样和五分钟检查。随后由审核交付流程处理 Git/PR/远端 CI 并通知 Hermes review。不得把本地夹具 PASS 当生产验收 PASS。
 
-发布仍需处理 Node 18 EOL、基础镜像 digest 固定、目标架构 wheel 可用性、只读挂载权限、SQL 聚合查询负载、证书续期和单机重建停机窗口。未发生数据库/消息源变更。
+发布仍需处理 Python/Nginx 基础镜像 digest 固定、目标架构 wheel 可用性、只读挂载权限、SQL 聚合查询负载、证书续期和单机重建停机窗口。未发生数据库/消息源变更。
+
+## 2026-10-16 上线推进复验：实际 Node 22
+
+以上“本地交付”章节保留首次草案的历史结果；本节记录后续复验，覆盖此前的 Node 24 等价性说法。Node 24 跑通不能推断 Node 22 一定兼容。
+
+- 官方 `https://nodejs.org/dist/index.json` 中的 Node 22 LTS 为 `v22.23.3`；下载对应 `node-v22.23.3-darwin-arm64.tar.gz`，与同目录官方 `SHASUMS256.txt` 校验一致。在临时目录运行，未替换系统 Node。
+- 查询 Docker Hub 官方 `library/node:22.23.3-bookworm-slim` manifest：`sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392`，包含 Linux amd64/arm64。Dockerfile 默认引用固定到该 digest。注册表 manifest 存在不等于容器已经构建通过。
+- 直接使用本 worktree 的 `createServer()`，默认加载本 worktree bridge，监听系统分配的 `127.0.0.1` 临时端口。SQL 子进程只读取已有外部配置，未复制或打印凭证；未访问或重启宿主机 8765。测试结束已关闭临时服务。
+
+实际脱敏结果：
+
+```text
+node --version
+v22.23.3
+
+GET /healthz       HTTP 200  4.22s  ok=true source=sqlserver
+GET /api/receptions HTTP 200 4.51s  ok=true source=sqlserver records=50
+time_field_strings=true
+GET /             HTTP 200  145391 bytes
+
+node docs/deploy/test-healthz.cjs --listen
+PASS ephemeral HTTP: success + SQL failure + unchanged API
+PASS healthz: 72 assertions (fixtures; real SQL/container readiness unverified)
+
+node reports/test-v4.cjs
+PASS HTTP / PASS v4 UI (injected fixtures)
+node reports/test-v4-sql.cjs
+PASS SQL bridge (driver fixture)
+bash scripts/verify-b-only.sh
+39 PASS / 0 FAIL; channel 3 PASS / 0 FAIL
+bash scripts/verify-channel-preserve.sh
+Summary: PASS 9 / FAIL 0 (historical bug, patch, current worktree)
+```
+
+测试使用主仓已有 jsdom，通过 `NODE_PATH` 提供，未安装或修改依赖。以上所有命令均使用实际 Node 22.23.3。测试原始输出暂存在 `/tmp/witop-node22-test-results.txt`；真实接口仅保存脱敏摘要到 `/tmp/witop-node22-live-results.json`，不保存客户内容。
+
+外部流程在本次验证期间已提交并推送草案 `c0f2816`；后续仅追加 Node 版本和文档证据修正，保留该提交。GitHub 当前身份及仓库 push 权限已只读核实，未输出认证材料。
+
+当前仍无 Docker/Nginx 可执行文件；镜像构建、Python 3.11/pymssql 容器组合、大小、冷启动、五分钟容器健康、TLS/认证/CORS 和回滚均未验收。`reception.witop.com` 当前 DNS 未解析，也未提供目标生产主机。真实 SQL 接口验证不替代业务审核员内容抽样。`visual_skipped=true`。

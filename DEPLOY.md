@@ -5,7 +5,7 @@
 ## 发布前必须确认
 
 - **域名待确认**：配置暂定 `reception.witop.com`，只允许对应 HTTPS Origin。尚未验证该域的所有权、DNS 或证书。运营确认域名后，同步修改 `nginx.conf` 的白名单、`server_name`、跳转地址和 Compose 健康检查的 Host。不要扩大为通配 Origin。
-- **Node 22 LTS 已通过等价性验证**：本卡已升级 Node 22 LTS，因此默认使用 `node:22.20.0-bookworm-slim`。等价性证据：Hermes 已在 Node 24 下实测该 worktree 的 `scripts/server.js` + `scripts/sqlserver-bridge.js` —— 容器绑定 `0.0.0.0:8765`、`/healthz` HTTP 200 返回 `{"ok":true,"source":"sqlserver",…}`、`/api/receptions` HTTP 200 命中 SQL Server 返回 50 条真实接待记录（`source=sqlserver`、`ok=true`）。Node 24 是 Node 22 LTS 的下两代 major，其行为子集更严覆盖 Node 22，因此 Node 22 一定能跑同源同路径。本草案不代表已获生产放行。
+- **实际 Node 22 验证通过，容器待验**：默认镜像统一到 `node:22.23.3-bookworm-slim`，并固定官方多架构 manifest digest。使用经官方 SHA-256 校验的 macOS ARM64 Node `v22.23.3`，直接运行同一 worktree 的 `server.js` 和 `sqlserver-bridge.js`，在临时 loopback 端口验证 `/healthz` HTTP 200、`ok=true/source=sqlserver`；`/api/receptions` HTTP 200 返回 50 条真实 SQL 记录，时间字段保持字符串；首页 HTTP 200。健康检查 72 断言、v4 HTTP/UI 与 SQL 夹具、B 视图和 channel 历史回归均通过。未混用 main bridge，未改动现有 8765。此前 Node 24 的结果不能证明 Node 22 兼容；本次通过的是实际 Node 22 的宿主机验证，Linux 镜像内 Node/Python、容器冷启动和完整 Nginx 验收仍待执行。
 - 目标 Linux 云主机已有 Docker Engine、Compose v2（支持 `up --wait` 和长格式 bind mount），可访问镜像仓库和 SQL Server。用 SQL 只读账户及最小网络 ACL；不开放数据库端口到公网。
 - 外部 TLS 证书、Basic Auth 用户文件及 SQL 配置由运维的凭证系统提供。此任务不创建、读取或复制真实凭证。Basic Auth 是最小访问控制；公网长期使用应另行确认公司身份认证方案。
 - 必须完成下文真实容器验收、镜像大小及五分钟持续可用检查。当前本机没有 Docker，不能从代码检查推断这些项目通过。完整本轮证据见 [验证记录](docs/deploy/VALIDATION.md)。
@@ -111,9 +111,9 @@ docker compose --project-name witop-production --env-file .env.production down
 
 当前 `.github/workflows/lint.yml` 只含语法、空白和 channel-preserve 回归，**没有镜像构建/推送/部署 job**。本卡只起草流程，不改 CI，也不自动发布。
 
-1. 在本 worktree 完成自检。当前 `completion_contract=local-only`：变更留本地，Hermes 审核并接手后续 Git/PR 操作；本轮不生成提交或 PR。
+1. 初始草案按任务卡 `completion_contract=local-only` 留在本地。James 后续指令“推进上线”后，继续在本 worktree 完成实际 Node 22 自检并准备 PR；生产主机、域名及容器验收条件仍需补齐。
 2. 由审核后的交付流程执行 worktree → commit → push 当前任务分支 → PR 到 main；CI 必须全绿后，通知 Hermes 走 review；不得自动 merge。
-3. 后续经授权的 CI 构建阶段：目标架构 `docker compose ... build app`；验证运行时、非 root、镜像大小与扫描；发布 `git-<完整提交 SHA>`，记录仓库 digest。基础 Node/Python/Nginx 镜像也固定 digest；本 Dockerfile 的 tag 默认值只用于草案。测试依赖 jsdom 留在 Node 22+ 的 CI 中，不安装到 Node 18 运行镜像。
+3. 后续经授权的 CI 构建阶段：目标架构 `docker compose ... build app`；验证运行时、非 root、镜像大小与扫描；发布 `git-<完整提交 SHA>`，记录仓库 digest。Node 基础镜像已固定多架构 digest；发布前还需固定 Python/Nginx digest。测试依赖 jsdom 留在测试环境中，不安装到生产运行镜像。
 4. 在独立、使用授权只读凭证的测试环境跑真实 SQL、五分钟健康、Nginx TLS/认证/CORS、业务内容抽样和回滚演练。外部 CI 不复制开发机的 launchd/SQL 配置。只有批准的发布 job 可 push 镜像；不得因开 PR 自动推送或部署。
 5. 发布记录同时保存当前/上一稳定 app digest、Nginx digest、部署配置 Git SHA、架构、大小、冷启动秒数、脱敏验收结果和配置备份路径。配置备份使用运维秘密存储，不放仓库。
 6. 人工批准后在云主机用审核的配置及镜像执行下述命令。发布前备份已部署 `nginx.conf`、Compose 和受保护的 `.env.production`；填写新 `WITOP_APP_IMAGE`，保持上一稳定值可恢复。不要重建生产镜像。
