@@ -21,3 +21,17 @@ must fail if jsdom is unavailable; never skip or download dependencies silently.
 
 Optional browser visual checks are separate; record `visual_skipped=true` when
 not run. Do not treat jsdom checks as browser visual evidence.
+
+## SQL Server reception bridge
+
+`server.js` serves the v4 entry and a read-only `/api/receptions` endpoint on
+loopback. `sqlserver-bridge.js` invokes a Python runtime with pymssql; credentials
+stay in the existing external config file. Do not copy credentials into the repo,
+CLI arguments, browser payloads, logs, or reports. Do not expose arbitrary SQL or
+filesystem paths through HTTP. Diagnostics are CLI-only and must omit messages
+and customer identifiers. Real SQL handshake/schema evidence is required for
+integration acceptance; injected test data validates behavior only.
+
+The message table has no verified service-completion contract. Do not infer
+service completion, AI summaries, or workflow transitions from message ownership.
+Keep v4 live records separate from the historical mock state machine.
