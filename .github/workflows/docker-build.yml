@@ -1,0 +1,161 @@
+# Docker CI — Build & Smoke Test
+# PR #13: Verifies Docker image builds, measures size/cold-start, validates HTTP endpoints.
+# Acceptance: / → 200, /healthz without SQL → 503 (PASS, "dependency not ready" semantics).
+
+name: docker-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to build (branch, tag, or commit SHA)
+        required: true
+        default: ${{ github.ref_name }}
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'nginx.conf'
+      - 'scripts/server.js'
+      - 'scripts/sqlserver-bridge.js'
+      - '.github/workflows/docker-build.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/witop-quote-ui
+
+jobs:
+  build-and-smoke:
+    name: Build, Size & Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 1
+
+      # ── 1. Build ────────────────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true                          # load into local docker daemon (no push)
+          push: false
+          tags: |
+            witop-test:${{ github.sha }}
+            witop-test:latest
+          outputs: type=image,name=witop-test:${{ github.sha }},oci-mediatype=false
+          cache-from: type=gha,scope=build-${{ github.run_id }}
+          cache-to: type=gha,mode=max,scope=build-${{ github.run_id }}
+          build-args: |
+            NODE_IMAGE=node:22.23.3-bookworm-slim
+
+      # ── 2. Build size ──────────────────────────────────────────────────────
+      - name: Measure image size
+        run: |
+          SIZE=$(docker images witop-test:${{ github.sha }} --format '{{.Size}}')
+          echo "Image size: $SIZE"
+          # Emit for PR comment parsing
+          echo "build_size=$SIZE" >> $GITHUB_OUTPUT
+          echo "BUILD_SIZE=$SIZE" >> $GITHUB_ENV
+
+      # ── 3. Cold-start + HTTP smoke ─────────────────────────────────────────
+      - name: Cold-start smoke test
+        id: smoke
+        run: |
+          # Start container without SQL config → /healthz returns 503 (expected).
+          CONTAINER_ID=$(docker run -d --rm \
+            --health-cmd="node -e \"const h=require('node:http');const r=h.get('http://127.0.0.1:8765/healthz',s=>{let b='';s.on('data',c=>b+=c);s.on('end',()=>{try{const v=JSON.parse(b);process.exit(s.statusCode===200&&v.ok===true&&v.source==='sqlserver'?0:1)}catch{process.exit(1)}});r.setTimeout(32000,()=>r.destroy());r.on('error',()=>process.exit(1));\";\" \
+            --health-interval=5s \
+            --health-timeout=10s \
+            --health-retries=3 \
+            -p 18765:8765 \
+            witop-test:${{ github.sha }})
+
+          echo "Container started: $CONTAINER_ID"
+
+          # Wait for container to be healthy (or 90s timeout)
+          echo "Waiting for container health..."
+          ELAPSED=0
+          HEALTH_STATUS=""
+          while [ $ELAPSED -lt 90 ]; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' $CONTAINER_ID 2>/dev/null || echo "none")
+            if [ "$STATUS" = "healthy" ]; then
+              HEALTH_STATUS="healthy"
+              break
+            elif [ "$STATUS" = "unhealthy" ]; then
+              HEALTH_STATUS="unhealthy"
+              break
+            fi
+            sleep 3
+            ELAPSED=$((ELAPSED + 3))
+          done
+
+          # Capture startup time (approx: from run start to first health check)
+          echo "Container health status: $HEALTH_STATUS (waited ${ELAPSED}s)"
+          echo "cold_start_seconds=$ELAPSED" >> $GITHUB_OUTPUT
+          echo "COLD_START=$ELAPSED" >> $GITHUB_ENV
+
+          # ── Smoke: / returns 200 ─────────────────────────────────────────
+          ROOT_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18765/ || echo "000")
+          echo "GET / → HTTP $ROOT_CODE"
+          echo "root_http_code=$ROOT_CODE" >> $GITHUB_OUTPUT
+
+          if [ "$ROOT_CODE" != "200" ]; then
+            echo "::error::GET / returned $ROOT_CODE, expected 200"
+            curl -s http://127.0.0.1:18765/ | head -c 200
+            docker kill $CONTAINER_ID 2>/dev/null || true
+            exit 1
+          fi
+
+          # ── Smoke: /healthz without SQL → 503 (PASS per spec) ────────────
+          HEALTHZ_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18765/healthz || echo "000")
+          echo "GET /healthz → HTTP $HEALTHZ_CODE"
+          echo "healthz_http_code=$HEALTHZ_CODE" >> $GITHUB_OUTPUT
+
+          if [ "$HEALTHZ_CODE" = "503" ]; then
+            echo "✓ /healthz correctly returns 503 (SQL not configured — expected)"
+          elif [ "$HEALTHZ_CODE" = "200" ]; then
+            echo "::warning::GET /healthz returned 200 — SQL may be unexpectedly configured"
+          else
+            echo "::error::GET /healthz returned $HEALTHZ_CODE, expected 503 (no SQL configured)"
+            docker kill $CONTAINER_ID 2>/dev/null || true
+            exit 1
+          fi
+
+          # Cleanup
+          docker kill $CONTAINER_ID 2>/dev/null || true
+          echo "Container stopped"
+
+      # ── 4. Summary ─────────────────────────────────────────────────────────
+      - name: Summary
+        run: |
+          echo "## Docker Build CI Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Image size | ${{ env.BUILD_SIZE }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Cold-start | ~${{ env.COLD_START }}s |" >> $GITHUB_STEP_SUMMARY
+          echo "| GET / | HTTP ${{ steps.smoke.outputs.root_http_code }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GET /healthz | HTTP ${{ steps.smoke.outputs.healthz_http_code }} (no SQL — 503 expected) |" >> $GITHUB_STEP_SUMMARY
