@@ -144,6 +144,10 @@ jobs:
       # --- 1. Build image (load into local daemon, do NOT push) ----------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          # Use docker driver (not docker-container) → no buildkit container → no keychain lookup.
+          # local build only (load=true, push=false), so docker driver is sufficient.
+          driver: docker
 
       - name: Build Docker image
         id: build
