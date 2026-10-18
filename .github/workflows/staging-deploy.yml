@@ -73,19 +73,13 @@ jobs:
       - name: Patch Docker config (remove keychain store)
         run: |
           set -euo pipefail
-          DOCKER_CONF="${DOCKER_CONFIG:-$HOME/.docker}"
-          CONF="$DOCKER_CONF/config.json"
+          CONF="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
           if [ -f "$CONF" ] && grep -q '"credsStore"' "$CONF" 2>/dev/null; then
             echo "Patching $CONF to remove credsStore"
-            python3 -c "
-import json, sys, os
-conf = os.environ.get('DOCKER_CONFIG', os.path.expanduser('~/.docker')) + '/config.json'
-data = json.load(open(conf))
-data.pop('credsStore', None)
-data.pop('credHelpers', None)
-json.dump(data, open(conf,'w'), indent=2)
-print('Patched:', json.dumps(data))
-"
+            # Remove credsStore and credHelpers keys using sed
+            # Works entirely in shell, no multiline strings that confuse YAML parser
+            sed -i '' -E '/"credsStore"|"credHelpers"/d' "$CONF"
+            echo "Patched: $(cat "$CONF")"
           else
             echo "No credsStore found in $CONF, nothing to patch"
           fi
