@@ -142,8 +142,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # Empty config → no keychain access needed (no push, no remote registry)
-          config-from: ''
+          # Empty inline config → no keychain/credential-helper lookup (load-only, no push)
+          config-inline: ''
 
       - name: Build Docker image
         id: build
