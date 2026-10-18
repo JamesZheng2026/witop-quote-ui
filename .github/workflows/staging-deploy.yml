@@ -65,6 +65,9 @@ jobs:
       # Docker Desktop on macOS: default context → /var/run/docker.sock (missing).
       # Set DOCKER_HOST so ALL docker/buildx commands use the real desktop socket.
       DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
+      # Prepend stub security binary so osxkeychain credential helper calls succeed.
+      # launchd runner has no keychain session; stub returns 0 (success).
+      PATH: /tmp/stub_bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
     steps:
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -74,10 +77,15 @@ jobs:
         run: |
           set -euo pipefail
           # Remove Docker config + buildx cache — both contain osxkeychain helper registration.
-          # Without these, docker buildx won't call the keychain credential helper.
           rm -f "${HOME}/.docker/config.json"
           rm -rf "${HOME}/.docker/buildx"
-          echo "Removed ~/.docker/config.json and ~/.docker/buildx (osxkeychain helper removed)"
+          # Stub the 'security' binary so osxkeychain helper calls succeed harmlessly.
+          # launchd runner has no keychain session; the real command would always fail.
+          mkdir -p /tmp/stub_bin
+          printf '#!/bin/sh\nexit 0\n' > /tmp/stub_bin/security
+          chmod +x /tmp/stub_bin/security
+          export PATH="/tmp/stub_bin:$PATH"
+          echo "Stub security binary installed at /tmp/stub_bin/security (exit 0)"
 
       - name: Checkout
         uses: actions/checkout@v4
