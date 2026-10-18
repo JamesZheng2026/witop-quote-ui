@@ -1,0 +1,17 @@
+name: stub-osxkeychain
+description: Install stub docker-credential-osxkeychain to bypass keychain on launchd runners
+runs:
+  using: composite
+  steps:
+    - run: |
+        set -euo pipefail
+        mkdir -p /tmp/stub_creds
+        # Remove Docker config + buildx cache (contains osxkeychain helper registration).
+        rm -f "${HOME}/.docker/config.json"
+        rm -rf "${HOME}/.docker/buildx"
+        # Copy stub to both locations Docker looks for it.
+        cp "${{ github.action_path }}/entrypoint.sh" /tmp/stub_creds/docker-credential-osxkeychain
+        chmod +x /tmp/stub_creds/docker-credential-osxkeychain
+        cp /tmp/stub_creds/docker-credential-osxkeychain /usr/local/bin/docker-credential-osxkeychain
+        echo "Stub docker-credential-osxkeychain installed"
+      shell: bash

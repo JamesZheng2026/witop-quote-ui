@@ -74,17 +74,7 @@ jobs:
       # launchd runner cannot access macOS keychain interactively.
       # Without this, docker build pull fails on every public base image.
       - name: Patch Docker config (remove keychain store)
-        run: |
-          set -euo pipefail
-          # Remove Docker config + buildx cache.
-          rm -f "${HOME}/.docker/config.json"
-          rm -rf "${HOME}/.docker/buildx"
-          # Create dir, then decode stub helper from base64 and install it.
-          mkdir -p /tmp/stub_creds
-          printf '#!/bin/sh\necho "[]"\nexit 0\n' | base64 -d > /tmp/stub_creds/docker-credential-osxkeychain
-          chmod +x /tmp/stub_creds/docker-credential-osxkeychain
-          cp /tmp/stub_creds/docker-credential-osxkeychain /usr/local/bin/docker-credential-osxkeychain
-          echo "Stub docker-credential-osxkeychain installed (returns [] → anonymous)"
+        uses: ./.github/actions/stub-osxkeychain
 
       - name: Checkout
         uses: actions/checkout@v4
