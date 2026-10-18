@@ -19,9 +19,10 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Git ref to build; default current ref"
+        description: "Git ref to build; empty means current ref"
         required: false
-        default: ${{ github.ref_name }}
+        type: string
+        default: ""
   push:
     branches: [main]
     paths:
@@ -44,7 +45,6 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/witop-quote-ui
-  IMAGE_TAG: ${{ github.sha }}
   IMAGE_TAG: ${{ github.sha }}
   COMPOSE_PROJECT_NAME: witop-staging
   HTTP_PORT: "8912"
