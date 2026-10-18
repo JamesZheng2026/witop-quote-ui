@@ -79,9 +79,9 @@ jobs:
           # Remove Docker config + buildx cache.
           rm -f "${HOME}/.docker/config.json"
           rm -rf "${HOME}/.docker/buildx"
-          # Decode stub helper from base64 and install it.
-          printf '#!/bin/sh\necho "[]"\nexit 0\n' | base64 -d > /tmp/stub_creds/docker-credential-osxkeychain
+          # Create dir, then decode stub helper from base64 and install it.
           mkdir -p /tmp/stub_creds
+          printf '#!/bin/sh\necho "[]"\nexit 0\n' | base64 -d > /tmp/stub_creds/docker-credential-osxkeychain
           chmod +x /tmp/stub_creds/docker-credential-osxkeychain
           cp /tmp/stub_creds/docker-credential-osxkeychain /usr/local/bin/docker-credential-osxkeychain
           echo "Stub docker-credential-osxkeychain installed (returns [] → anonymous)"
