@@ -218,7 +218,6 @@ jobs:
           HTTP_PORT=${{ env.HTTP_PORT }}
           EOF
           # env-file for docker compose (no quotes - env-file uses KEY=VALUE)
-          sed -i 's/^[[:space:]]*//' .env.staging
           echo "--- .env.staging ---"
           cat .env.staging
 
