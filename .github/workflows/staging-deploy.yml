@@ -74,11 +74,13 @@ jobs:
         run: |
           set -euo pipefail
           CONF="${HOME}/.docker/config.json"
-          if [ -f "$CONF" ] && grep -q '"credsStore"' "$CONF" 2>/dev/null; then
-            sed -i '' -E '/"credsStore"|"credHelpers"/d' "$CONF"
-            echo "Removed credsStore from $CONF: $(cat "$CONF")"
+          # Delete config.json entirely — buildx needs no auth for public images.
+          # Without this file, buildx won't call osxkeychain and won't fail.
+          if [ -f "$CONF" ]; then
+            rm -f "$CONF"
+            echo "Removed $CONF (credsStore=osxkeychain caused keychain failures)"
           else
-            echo "No credsStore in $CONF, nothing to do"
+            echo "$CONF already absent, nothing to do"
           fi
 
       - name: Checkout
