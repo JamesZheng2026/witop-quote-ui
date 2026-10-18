@@ -74,15 +74,10 @@ jobs:
         run: |
           set -euo pipefail
           CONF="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
-          if [ -f "$CONF" ] && grep -q '"credsStore"' "$CONF" 2>/dev/null; then
-            echo "Patching $CONF to remove credsStore"
-            # Remove credsStore and credHelpers keys using sed
-            # Works entirely in shell, no multiline strings that confuse YAML parser
-            sed -i '' -E '/"credsStore"|"credHelpers"/d' "$CONF"
-            echo "Patched: $(cat "$CONF")"
-          else
-            echo "No credsStore found in $CONF, nothing to patch"
-          fi
+          # Replace with minimal config — no credsStore, no credHelpers.
+          # We only pull public images, so no auth needed.
+          echo '{}' > "$CONF"
+          echo "Replaced $CONF with empty config (no keychain auth)"
 
       - name: Checkout
         uses: actions/checkout@v4
