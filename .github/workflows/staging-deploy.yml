@@ -62,9 +62,6 @@ jobs:
     env:
       SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
       NGINX_AUTH_HTPASSWD: ${{ secrets.NGINX_AUTH_HTPASSWD }}
-      # Override ~/.docker/config.json which has credsStore=osxkeychain
-      # (launchd runner can't access keychain interactively → skip it)
-      DOCKER_CONFIG: ''
 
     steps:
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -169,8 +166,6 @@ jobs:
           file: ./Dockerfile
           load: true
           push: false
-          # load-only, no registry auth needed — avoids macOS keychain credential helper
-          registry-auth: false
           tags: witop-staging:${{ github.sha }}
           cache-from: type=gha,scope=staging-${{ github.run_id }}
           cache-to: type=gha,mode=max,scope=staging-${{ github.run_id }}
