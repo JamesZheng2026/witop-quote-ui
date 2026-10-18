@@ -62,6 +62,9 @@ jobs:
     env:
       SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
       NGINX_AUTH_HTPASSWD: ${{ secrets.NGINX_AUTH_HTPASSWD }}
+      # Override ~/.docker/config.json which has credsStore=osxkeychain
+      # (launchd runner can't access keychain interactively → skip it)
+      DOCKER_CONFIG: ''
 
     steps:
       - name: Checkout
@@ -141,9 +144,6 @@ jobs:
       # --- 1. Build image (load into local daemon, do NOT push) ----------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          # Empty inline config → no keychain/credential-helper lookup (load-only, no push)
-          config-inline: ''
 
       - name: Build Docker image
         id: build
