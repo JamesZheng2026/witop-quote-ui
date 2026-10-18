@@ -67,7 +67,7 @@ jobs:
       DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
       # Prepend stub security binary so osxkeychain credential helper calls succeed.
       # launchd runner has no keychain session; stub returns 0 (success).
-      PATH: /tmp/stub_bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
     steps:
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -79,13 +79,19 @@ jobs:
           # Remove Docker config + buildx cache — both contain osxkeychain helper registration.
           rm -f "${HOME}/.docker/config.json"
           rm -rf "${HOME}/.docker/buildx"
-          # Stub the 'security' binary so osxkeychain helper calls succeed harmlessly.
-          # launchd runner has no keychain session; the real command would always fail.
-          mkdir -p /tmp/stub_bin
-          printf '#!/bin/sh\nexit 0\n' > /tmp/stub_bin/security
-          chmod +x /tmp/stub_bin/security
-          export PATH="/tmp/stub_bin:$PATH"
-          echo "Stub security binary installed at /tmp/stub_bin/security (exit 0)"
+          # Replace osxkeychain credential helper with a stub that returns empty credentials.
+          # Docker then falls back to anonymous access (fine for public images).
+          # Must go in /usr/local/bin BEFORE the real helper (which is in /usr/local/bin).
+          cat > /tmp/stub_dch.sh << 'STUBEOF'
+#!/bin/sh
+echo "[]"; exit 0
+STUBEOF
+          mkdir -p /tmp/stub_creds
+          cp /tmp/stub_dch.sh /tmp/stub_creds/docker-credential-osxkeychain
+          chmod +x /tmp/stub_creds/docker-credential-osxkeychain
+          export PATH="/tmp/stub_creds:$PATH"
+          cp /tmp/stub_creds/docker-credential-osxkeychain /usr/local/bin/docker-credential-osxkeychain
+          echo "Stub docker-credential-osxkeychain installed (returns empty creds → anonymous)"
 
       - name: Checkout
         uses: actions/checkout@v4
