@@ -70,17 +70,17 @@ jobs:
       PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
     steps:
-      # Fix: remove credsStore=osxkeychain from Docker config.
-      # launchd runner cannot access macOS keychain interactively.
-      # Without this, docker build pull fails on every public base image.
-      - name: Patch Docker config (remove keychain store)
-        uses: ./.github/actions/stub-osxkeychain
-
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
           fetch-depth: 1
+
+      # Fix: remove credsStore=osxkeychain from Docker config.
+      # launchd runner cannot access macOS keychain interactively.
+      # Without this, docker build pull fails on every public base image.
+      - name: Patch Docker config (remove keychain store)
+        uses: ./.github/actions/stub-osxkeychain
 
       # --- 0. Secret preflight ---------------------------------------------
       - name: Preflight - required secrets present
