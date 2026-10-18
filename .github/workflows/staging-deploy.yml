@@ -198,7 +198,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > .env.staging <<EOF
-          WITOP_APP_IMAGE=${{ env.IMAGE_REF }}
+          WITOP_APP_IMAGE=${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           NGINX_IMAGE=nginx:1.27-alpine
           SQLSERVER_CONFIG=/run/secrets/sqlserver_config.json
           SQLSERVER_CONFIG_FILE=/tmp/witop-staging/run/secrets/sqlserver_config.json
