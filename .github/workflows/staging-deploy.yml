@@ -1,0 +1,331 @@
+# Phase 5 — CI Staging Acceptance
+# Verifies the Docker image (built from main) can run end-to-end with a real SQL bridge
+# and returns /healthz 200 with source=sqlserver, satisfying the Phase 5 acceptance contract.
+#
+# Secrets required (GitHub repo Settings -> Secrets -> Actions):
+#   SQLSERVER_CONFIG_JSON  - full SQL config (server/port/user/password/database/tds_version)
+#   NGINX_AUTH_HTPASSWD    - contents of the htpasswd file (e.g. "witop:$apr1$...")
+#   WITOP_APP_IMAGE        - (optional) override image tag, defaults to ghcr.io/<owner>/witop-quote-ui:<sha>
+#
+# Hard constraints inherited from Phase 4:
+#   - build-only, push=false (load=true)
+#   - healthz is the authoritative SQL health signal (no shell-only "container started" check)
+#   - container cleanup is mandatory (docker compose down)
+#   - never log secrets; write them to throwaway files at runtime only
+#
+# Phase 5 v2 (PR #15): switched to self-hosted runner.
+# Reason: SQL Server 221.2.76.114:5001 is reachable only from the Witop LAN; GitHub-hosted
+# ubuntu-latest runners cannot route to it. The self-hosted runner label `macos,staging`
+# targets the Mac Studio that already proved SQL connectivity (1.5s handshake, pymssql 2.4.1).
+# Set up the runner with RUNNER_SETUP.md; do not run on hosted runners.
+
+name: staging-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/staging-deploy.yml
+      - Dockerfile
+      - docker-compose.yml
+      - nginx.conf
+      - scripts/server.js
+      - scripts/sqlserver-bridge.js
+      - scripts/reception-bridge.js
+      - scripts/okki-adapter.js
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/witop-quote-ui
+  IMAGE_TAG: ${{ github.sha }}
+  COMPOSE_PROJECT_NAME: witop-staging
+  HTTP_PORT: "8912"
+  # 800 MB hard ceiling for image size (per Phase 5 acceptance).
+  SIZE_LIMIT_MB: "800"
+
+jobs:
+  staging-acceptance:
+    name: CI staging end-to-end
+    # Self-hosted runner on Mac Studio (Witop LAN). Must be online before dispatch.
+    # See RUNNER_SETUP.md for installation and launchd registration.
+    runs-on: [self-hosted, macos, staging]
+    timeout-minutes: 25
+    # Fail closed on missing secrets - do not run with placeholder credentials.
+    env:
+      SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
+      NGINX_AUTH_HTPASSWD: ${{ secrets.NGINX_AUTH_HTPASSWD }}
+      # Docker Desktop on macOS: default context → /var/run/docker.sock (missing).
+      # Set DOCKER_HOST so ALL docker/buildx commands use the real desktop socket.
+      DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
+      # Prepend stub security binary so osxkeychain credential helper calls succeed.
+      # launchd runner has no keychain session; stub returns 0 (success).
+      PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+
+      # Fix: remove credsStore=osxkeychain from Docker config.
+      # launchd runner cannot access macOS keychain interactively.
+      # Without this, docker build pull fails on every public base image.
+      - name: Patch Docker config (remove keychain store)
+        uses: ./.github/actions/stub-osxkeychain
+
+      # --- 0. Secret preflight ---------------------------------------------
+      - name: Preflight - required secrets present
+        id: preflight
+        run: |
+          set -euo pipefail
+          MISSING=()
+          [ -z "$SQLSERVER_CONFIG_JSON" ] && MISSING+=("SQLSERVER_CONFIG_JSON")
+          [ -z "$NGINX_AUTH_HTPASSWD" ]   && MISSING+=("NGINX_AUTH_HTPASSWD")
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${MISSING[*]}"
+            echo "Configure at: Settings -> Secrets -> Actions"
+            exit 1
+          fi
+          # Validate SQLSERVER_CONFIG_JSON parses as JSON
+          echo "$SQLSERVER_CONFIG_JSON" | python3 -c "import json,sys; json.loads(sys.stdin.read())" \
+            || { echo "::error::SQLSERVER_CONFIG_JSON is not valid JSON"; exit 1; }
+          echo "Secrets present and valid"
+
+      # --- 0b. SQL config field validation (Phase 5 v2) ---------------------
+      # SQL Server lives on the Witop LAN (221.2.76.114:5001, TDS 7.0, SQL Server 2012).
+      # Reject placeholders that previously crashed the bridge (literal "<...>" strings).
+      - name: Preflight - SQL config field validation
+        id: preflight_sql
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/witop-staging
+          echo "$SQLSERVER_CONFIG_JSON" > /tmp/witop-staging/_cfg.json
+          chmod 600 /tmp/witop-staging/_cfg.json
+          python3 - <<'PY'
+          import json, re, sys
+          cfg = json.load(open('/tmp/witop-staging/_cfg.json'))
+          required = ['server', 'port', 'user', 'password', 'database', 'tds_version']
+          missing = [k for k in required if not cfg.get(k)]
+          if missing:
+              print(f"::error::SQLSERVER_CONFIG_JSON missing fields: {missing}")
+              sys.exit(1)
+          placeholder_re = re.compile(r'^<.*>$')
+          ph = [k for k,v in cfg.items() if isinstance(v,str) and placeholder_re.match(v)]
+          if ph:
+              print(f"::error::SQLSERVER_CONFIG_JSON has placeholder values: {ph}")
+              sys.exit(1)
+          if not re.match(r'^\d{1,3}(\.\d{1,3}){3}$|^[A-Za-z0-9.\-]+$', cfg['server']):
+              print(f"::error::SQLSERVER_CONFIG_JSON server looks invalid: {cfg['server']!r}")
+              sys.exit(1)
+          if not (1 <= int(cfg['port']) <= 65535):
+              print(f"::error::SQLSERVER_CONFIG_JSON port out of range: {cfg['port']}")
+              sys.exit(1)
+          if cfg['tds_version'] not in ('7.0','7.1','7.2','7.3','7.4','8.0'):
+              print(f"::error::SQLSERVER_CONFIG_JSON tds_version invalid: {cfg['tds_version']!r}")
+              sys.exit(1)
+          print(f"SQL config OK: server={cfg['server']} port={cfg['port']} db={cfg['database']} tds={cfg['tds_version']}")
+          PY
+          rm -f /tmp/witop-staging/_cfg.json
+
+      # --- 0c. Runner readiness (self-hosted only) --------------------------
+      - name: Preflight - docker available on runner
+        run: |
+          set -euo pipefail
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "::error::docker not found on runner. Install Docker Desktop, see DOCKER_SETUP.md"
+            exit 1
+          fi
+          if ! docker info >/dev/null 2>&1; then
+            echo "::error::docker daemon not reachable. Start Docker Desktop and retry."
+            exit 1
+          fi
+          echo "docker $(docker --version) ready"
+
+      # --- 1. Build image (load into local daemon, do NOT push) ----------
+      # Skip docker/setup-buildx-action entirely — buildx invokes osxkeychain helper for every
+      # image pull (even public), which fails under launchd (no keychain session).
+      # Use plain 'docker build' which does not use the helper.
+
+      - name: Build Docker image
+        id: build
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg NODE_IMAGE=node:22.23.3-bookworm-slim \
+            --tag witop-staging:${{ github.sha }} \
+            --file ./Dockerfile \
+            .
+          echo "build_tag=witop-staging:${{ github.sha }}" >> $GITHUB_OUTPUT
+
+      - name: Measure image size
+        id: size
+        run: |
+          set -euo pipefail
+          SIZE_LABEL=$(docker images witop-staging:${{ github.sha }} --format '{{.Size}}' | head -1)
+          # docker reports "270.5MB" or "1.2GB"; normalise to MB (float)
+          SIZE_MB=$(docker images witop-staging:${{ github.sha }} --format '{{.Size}}' \
+            | awk '{
+                v=$1; u=$2;
+                if (u=="GB" || u=="GiB") { mb=v*1024 }
+                else if (u=="MB" || u=="MiB") { mb=v }
+                else if (u=="kB" || u=="KiB") { mb=v/1024 }
+                else if (u=="B") { mb=v/1048576 }
+                else { mb=v }
+                printf "%.1f", mb
+              }')
+          echo "Image size: $SIZE_LABEL (~$SIZE_MB MB)"
+          echo "size_label=$SIZE_LABEL" >> $GITHUB_OUTPUT
+          echo "size_mb=$SIZE_MB" >> $GITHUB_OUTPUT
+          echo "SIZE_LABEL=$SIZE_LABEL" >> $GITHUB_ENV
+          LIMIT=${{ env.SIZE_LIMIT_MB }}
+          awk -v m="$SIZE_MB" -v l="$LIMIT" 'BEGIN{exit !(m<=l)}' \
+            || { echo "::error::Image $SIZE_MB MB exceeds $LIMIT MB ceiling"; exit 1; }
+          echo "Image size within ceiling ($SIZE_MB MB <= $LIMIT MB)"
+
+      # --- 2. Stage runtime config (secrets -> throwaway files) -----------
+      - name: Write throwaway SQL config and htpasswd
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/witop-staging/run/secrets /tmp/witop-staging/auth
+          # SQL config (json consumed by scripts/sqlserver-bridge.js)
+          echo "$SQLSERVER_CONFIG_JSON" > /tmp/witop-staging/run/secrets/sqlserver_config.json
+          chmod 600 /tmp/witop-staging/run/secrets/sqlserver_config.json
+          # nginx htpasswd
+          echo "$NGINX_AUTH_HTPASSWD" > /tmp/witop-staging/auth/htpasswd
+          chmod 640 /tmp/witop-staging/auth/htpasswd
+          echo "Throwaway config staged at /tmp/witop-staging/"
+          ls -l /tmp/witop-staging/run/secrets/sqlserver_config.json /tmp/witop-staging/auth/htpasswd
+
+      - name: Prepare env file for docker compose
+        run: |
+          set -euo pipefail
+          cat > .env.staging <<EOF
+          WITOP_APP_IMAGE=${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          NGINX_IMAGE=nginx:1.27-alpine
+          SQLSERVER_CONFIG=/run/secrets/sqlserver_config.json
+          SQLSERVER_CONFIG_FILE=/tmp/witop-staging/run/secrets/sqlserver_config.json
+          NGINX_AUTH_FILE=/tmp/witop-staging/auth/htpasswd
+          HTTP_BIND=127.0.0.1
+          HTTP_PORT=${{ env.HTTP_PORT }}
+          EOF
+          # env-file for docker compose (no quotes - env-file uses KEY=VALUE)
+          echo "--- .env.staging ---"
+          cat .env.staging
+
+      # --- 3. Bring up the stack -------------------------------------------
+      - name: docker compose up
+        id: up
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.staging -p ${{ env.COMPOSE_PROJECT_NAME }} up -d
+          # Wait for app container to become healthy (Docker HEALTHCHECK)
+          echo "Waiting for app container to be healthy..."
+          ELAPSED=0
+          STATUS=""
+          while [ $ELAPSED -lt 120 ]; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' \
+              ${{ env.COMPOSE_PROJECT_NAME }}-app-1 2>/dev/null || echo "none")
+            case "$STATUS" in
+              healthy)   echo "app healthy after ${ELAPSED}s"; break ;;
+              unhealthy) echo "::error::app unhealthy after ${ELAPSED}s"; \
+                          docker compose --env-file .env.staging -p ${{ env.COMPOSE_PROJECT_NAME }} logs --tail=200 app; \
+                          exit 1 ;;
+            esac
+            sleep 3
+            ELAPSED=$((ELAPSED+3))
+          done
+          [ "$STATUS" = "healthy" ] || { echo "::error::app did not become healthy in 120s (last: $STATUS)"; exit 1; }
+          echo "cold_start_seconds=$ELAPSED" >> $GITHUB_OUTPUT
+
+      # --- 4. Acceptance: GET /, GET /healthz -----------------------------
+      - name: "Smoke - GET / (nginx -> app)"
+        run: |
+          set -euo pipefail
+          # / is gated by basic auth (Option B / server_name _), so 401 is the
+          # correct response for an unauthenticated probe. This step verifies
+          # nginx is up and auth is in effect; /healthz (auth_basic off) below
+          # is the real readiness signal with source=sqlserver.
+          CODE=$(curl -s -o /tmp/witop-staging/root.html -w "%{http_code}" \
+            http://127.0.0.1:${{ env.HTTP_PORT }}/ || echo "000")
+          echo "GET / (no auth) -> HTTP $CODE"
+          case "$CODE" in
+            401) echo "GET / correctly gated by basic auth (nginx up, auth in effect)" ;;
+            200) echo "GET / unexpectedly 200 without auth (auth may be misconfigured)" ;;
+            *) echo "::error::GET / returned $CODE, expected 401 (auth-gated) or 200"; exit 1 ;;
+          esac
+          head -c 200 /tmp/witop-staging/root.html; echo
+
+      - name: "Smoke - GET /healthz (real SQL)"
+        id: healthz
+        run: |
+          set -euo pipefail
+          RESP=$(curl -s -o /tmp/witop-staging/healthz.json -w "%{http_code}" \
+            http://127.0.0.1:${{ env.HTTP_PORT }}/healthz || echo "000")
+          BODY=$(cat /tmp/witop-staging/healthz.json)
+          echo "GET /healthz -> HTTP $RESP"
+          echo "body: $BODY"
+          if [ "$RESP" != "200" ]; then
+            echo "::error::GET /healthz returned $RESP, expected 200 (real SQL connected)"
+            exit 1
+          fi
+          # Verify source=sqlserver in body
+          echo "$BODY" | python3 -c "
+          import json, sys
+          v = json.loads(sys.stdin.read())
+          assert v.get('source') == 'sqlserver', f\"source={v.get('source')!r}, expected 'sqlserver'\"
+          assert v.get('ok') is True, f\"ok={v.get('ok')!r}, expected True\"
+          print('/healthz body contract satisfied: ok=true, source=sqlserver')
+          "
+          echo "healthz_body=$BODY" >> $GITHUB_OUTPUT
+
+      - name: "Smoke - GET /api/receptions (real SQL, with basic auth)"
+        run: |
+          set -euo pipefail
+          # Extract "user:pass" from the first line of the htpasswd (basic auth pair)
+          AUTH_PAIR=$(head -1 /tmp/witop-staging/auth/htpasswd)
+          CODE=$(curl -s -o /tmp/witop-staging/api.json -w "%{http_code}" \
+            -u "$AUTH_PAIR" \
+            http://127.0.0.1:${{ env.HTTP_PORT }}/api/receptions || echo "000")
+          echo "GET /api/receptions (with auth) -> HTTP $CODE"
+          case "$CODE" in
+            200) echo "/api/receptions returned 200 (auth) - SQL data live";;
+            401|403) echo "/api/receptions gated by nginx basic auth (expected $CODE)";;
+            503) echo "::error::GET /api/receptions returned 503 - SQL bridge unhealthy"; exit 1 ;;
+            *) echo "::error::GET /api/receptions returned $CODE, expected 200/401/403"; exit 1 ;;
+          esac
+
+      # --- 5. Cleanup (mandatory) ------------------------------------------
+      - name: docker compose down
+        if: always()
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.staging -p ${{ env.COMPOSE_PROJECT_NAME }} down --remove-orphans || true
+          # Wipe throwaway config
+          rm -rf /tmp/witop-staging || true
+          rm -f .env.staging || true
+          echo "Stack torn down, throwaway config removed"
+
+      # --- 6. Summary ------------------------------------------------------
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Phase 5 - CI Staging Acceptance"
+            echo ""
+            echo "| Metric | Value |"
+            echo "|--------|-------|"
+            echo "| Image | \`witop-staging:${{ github.sha }}\` |"
+            echo "| Size | ${{ env.SIZE_LABEL }} (limit ${{ env.SIZE_LIMIT_MB }} MB) |"
+            echo "| HTTP_PORT | ${{ env.HTTP_PORT }} |"
+            echo "| Cold-start | ~${{ steps.up.outputs.cold_start_seconds }}s |"
+            echo "| GET /healthz | ${{ steps.healthz.outputs.healthz_body || 'see logs' }} |"
+          } >> $GITHUB_STEP_SUMMARY

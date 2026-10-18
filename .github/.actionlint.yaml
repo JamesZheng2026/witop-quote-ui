@@ -1,0 +1,12 @@
+# Allow custom labels for our self-hosted runner (Mac Studio).
+# These labels are configured at runner registration time, not in the GitHub
+# Actions hosted runner list, so actionlint would otherwise warn.
+self-hosted-runner:
+  labels:
+    - self-hosted
+    - macos
+    - staging
+    - x64
+    - arm64
+    - linux
+    - macos-15

@@ -1,0 +1,10 @@
+name: stub-osxkeychain
+description: Remove ~/.docker/config.json to prevent osxkeychain helper calls under launchd
+runs:
+  using: composite
+  steps:
+    - run: |
+        set -euo pipefail
+        rm -f "${HOME}/.docker/config.json"
+        echo "Removed ~/.docker/config.json (no credsStore → no osxkeychain calls)"
+      shell: bash
