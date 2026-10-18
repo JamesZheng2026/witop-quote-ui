@@ -165,26 +165,20 @@ jobs:
           echo "docker $(docker --context desktop-linux --version) ready (desktop-linux context)"
 
       # --- 1. Build image (load into local daemon, do NOT push) ----------
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          # docker driver + DOCKER_HOST points to desktop-linux socket
-          driver: docker
+      # Skip docker/setup-buildx-action entirely — buildx invokes osxkeychain helper for every
+      # image pull (even public), which fails under launchd (no keychain session).
+      # Use plain 'docker build' which does not use the helper.
 
       - name: Build Docker image
         id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          load: true
-          push: false
-          tags: witop-staging:${{ github.sha }}
-          # Use local cache — no GHA OIDC auth, no ghcr.io credentials, no keychain calls.
-          cache-from: type=local,src=/tmp/buildx-cache
-          cache-to: type=local,dest=/tmp/buildx-cache,mode=max
-          build-args: |
-            NODE_IMAGE=node:22.23.3-bookworm-slim
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg NODE_IMAGE=node:22.23.3-bookworm-slim \
+            --tag witop-staging:${{ github.sha }} \
+            --file ./Dockerfile \
+            .
+          echo "build_tag=witop-staging:${{ github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Measure image size
         id: size
