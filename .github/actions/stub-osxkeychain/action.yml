@@ -1,11 +1,10 @@
 name: stub-osxkeychain
-description: Create DOCKER_CONFIG=/tmp/docker_cfg with credsStore="" to bypass osxkeychain under launchd
+description: Remove ~/.docker/config.json to prevent osxkeychain helper calls under launchd
 runs:
   using: composite
   steps:
     - run: |
         set -euo pipefail
-        mkdir -p /tmp/docker_cfg
-        printf '{"credsStore":""}' > /tmp/docker_cfg/config.json
-        echo "DOCKER_CONFIG=/tmp/docker_cfg ready (credsStore empty string)"
+        rm -f "${HOME}/.docker/config.json"
+        echo "Removed ~/.docker/config.json (no credsStore → no osxkeychain calls)"
       shell: bash
