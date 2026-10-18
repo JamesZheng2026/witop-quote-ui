@@ -65,6 +65,9 @@ jobs:
       # Docker Desktop on macOS: default context → /var/run/docker.sock (missing).
       # Set DOCKER_HOST so ALL docker/buildx commands use the real desktop socket.
       DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
+      # DOCKER_CONFIG points to /tmp/docker_cfg which has credsStore="" (empty string).
+      # Docker skips helper calls when credsStore is empty — avoids osxkeychain under launchd.
+      DOCKER_CONFIG: /tmp/docker_cfg
       # Prepend stub security binary so osxkeychain credential helper calls succeed.
       # launchd runner has no keychain session; stub returns 0 (success).
       PATH: /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
