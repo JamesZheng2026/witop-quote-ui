@@ -62,9 +62,9 @@ jobs:
     env:
       SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
       NGINX_AUTH_HTPASSWD: ${{ secrets.NGINX_AUTH_HTPASSWD }}
-      # Docker Desktop socket — must use desktop-linux socket explicitly.
-      # Default context resolves to /var/run/docker.sock which does not exist on macOS.
-      DOCKER_BUILDX_ENDPOINT: unix:///Users/james/.docker/run/docker.sock
+      # Docker Desktop on macOS: default context → /var/run/docker.sock (missing).
+      # Set DOCKER_HOST so ALL docker/buildx commands use the real desktop socket.
+      DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
 
     steps:
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -162,9 +162,8 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # Use docker driver with desktop-linux context → no buildkit container, no keychain lookup.
+          # docker driver + DOCKER_HOST points to desktop-linux socket
           driver: docker
-          endpoint: unix:///Users/james/.docker/run/docker.sock
 
       - name: Build Docker image
         id: build
