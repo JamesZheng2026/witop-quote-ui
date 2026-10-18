@@ -95,6 +95,7 @@ jobs:
         id: preflight_sql
         run: |
           set -euo pipefail
+          mkdir -p /tmp/witop-staging
           echo "$SQLSERVER_CONFIG_JSON" > /tmp/witop-staging/_cfg.json
           chmod 600 /tmp/witop-staging/_cfg.json
           python3 - <<'PY'
