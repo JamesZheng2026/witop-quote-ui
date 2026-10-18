@@ -73,15 +73,11 @@ jobs:
       - name: Patch Docker config (remove keychain store)
         run: |
           set -euo pipefail
-          CONF="${HOME}/.docker/config.json"
-          # Delete config.json entirely — buildx needs no auth for public images.
-          # Without this file, buildx won't call osxkeychain and won't fail.
-          if [ -f "$CONF" ]; then
-            rm -f "$CONF"
-            echo "Removed $CONF (credsStore=osxkeychain caused keychain failures)"
-          else
-            echo "$CONF already absent, nothing to do"
-          fi
+          # Remove Docker config + buildx cache — both contain osxkeychain helper registration.
+          # Without these, docker buildx won't call the keychain credential helper.
+          rm -f "${HOME}/.docker/config.json"
+          rm -rf "${HOME}/.docker/buildx"
+          echo "Removed ~/.docker/config.json and ~/.docker/buildx (osxkeychain helper removed)"
 
       - name: Checkout
         uses: actions/checkout@v4
