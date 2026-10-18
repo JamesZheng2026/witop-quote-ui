@@ -150,6 +150,8 @@ jobs:
           file: ./Dockerfile
           load: true
           push: false
+          # load-only, no registry auth needed — avoids macOS keychain credential helper
+          registry-auth: false
           tags: witop-staging:${{ github.sha }}
           cache-from: type=gha,scope=staging-${{ github.run_id }}
           cache-to: type=gha,mode=max,scope=staging-${{ github.run_id }}
