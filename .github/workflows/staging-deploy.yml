@@ -16,24 +16,18 @@
 name: staging-deploy
 
 on:
-  workflow_dispatch:
-    inputs:
-      ref:
-        description: "Git ref to build; empty means current ref"
-        required: false
-        type: string
-        default: ""
   push:
     branches: [main]
     paths:
-      - ".github/workflows/staging-deploy.yml"
-      - "Dockerfile"
-      - "docker-compose.yml"
-      - "nginx.conf"
-      - "scripts/server.js"
-      - "scripts/sqlserver-bridge.js"
-      - "scripts/reception-bridge.js"
-      - "scripts/okki-adapter.js"
+      - .github/workflows/staging-deploy.yml
+      - Dockerfile
+      - docker-compose.yml
+      - nginx.conf
+      - scripts/server.js
+      - scripts/sqlserver-bridge.js
+      - scripts/reception-bridge.js
+      - scripts/okki-adapter.js
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -65,7 +59,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ github.ref }}
           fetch-depth: 1
 
       # --- 0. Secret preflight ---------------------------------------------
