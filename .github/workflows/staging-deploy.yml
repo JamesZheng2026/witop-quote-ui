@@ -62,6 +62,9 @@ jobs:
     env:
       SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
       NGINX_AUTH_HTPASSWD: ${{ secrets.NGINX_AUTH_HTPASSWD }}
+      # Docker Desktop socket — must use desktop-linux socket explicitly.
+      # Default context resolves to /var/run/docker.sock which does not exist on macOS.
+      DOCKER_BUILDX_ENDPOINT: unix:///Users/james/.docker/run/docker.sock
 
     steps:
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -70,11 +73,13 @@ jobs:
       - name: Patch Docker config (remove keychain store)
         run: |
           set -euo pipefail
-          CONF="${DOCKER_CONFIG:-$HOME/.docker}/config.json"
-          # Replace with minimal config — no credsStore, no credHelpers.
-          # We only pull public images, so no auth needed.
-          echo '{}' > "$CONF"
-          echo "Replaced $CONF with empty config (no keychain auth)"
+          CONF="${HOME}/.docker/config.json"
+          if [ -f "$CONF" ] && grep -q '"credsStore"' "$CONF" 2>/dev/null; then
+            sed -i '' -E '/"credsStore"|"credHelpers"/d' "$CONF"
+            echo "Removed credsStore from $CONF: $(cat "$CONF")"
+          else
+            echo "No credsStore in $CONF, nothing to do"
+          fi
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -140,23 +145,26 @@ jobs:
       - name: Preflight - docker available on runner
         run: |
           set -euo pipefail
+          # Docker Desktop socket lives at ~/.docker/run/docker.sock (desktop-linux context).
+          # Use it explicitly — the default context resolves to /var/run/docker.sock which
+          # does not exist on macOS with Docker Desktop.
           if ! command -v docker >/dev/null 2>&1; then
             echo "::error::docker not found on runner. Install Docker Desktop, see DOCKER_SETUP.md"
             exit 1
           fi
-          if ! docker info >/dev/null 2>&1; then
+          if ! docker --context desktop-linux info >/dev/null 2>&1; then
             echo "::error::docker daemon not reachable. Start Docker Desktop and retry."
             exit 1
           fi
-          echo "docker $(docker --version) ready"
+          echo "docker $(docker --context desktop-linux --version) ready (desktop-linux context)"
 
       # --- 1. Build image (load into local daemon, do NOT push) ----------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
-          # Use docker driver (not docker-container) → no buildkit container → no keychain lookup.
-          # local build only (load=true, push=false), so docker driver is sufficient.
+          # Use docker driver with desktop-linux context → no buildkit container, no keychain lookup.
           driver: docker
+          endpoint: unix:///Users/james/.docker/run/docker.sock
 
       - name: Build Docker image
         id: build
