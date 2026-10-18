@@ -250,10 +250,18 @@ jobs:
       - name: "Smoke - GET / (nginx -> app)"
         run: |
           set -euo pipefail
+          # / is gated by basic auth (Option B / server_name _), so 401 is the
+          # correct response for an unauthenticated probe. This step verifies
+          # nginx is up and auth is in effect; /healthz (auth_basic off) below
+          # is the real readiness signal with source=sqlserver.
           CODE=$(curl -s -o /tmp/witop-staging/root.html -w "%{http_code}" \
             http://127.0.0.1:${{ env.HTTP_PORT }}/ || echo "000")
-          echo "GET / -> HTTP $CODE"
-          [ "$CODE" = "200" ] || { echo "::error::GET / returned $CODE, expected 200"; exit 1; }
+          echo "GET / (no auth) -> HTTP $CODE"
+          case "$CODE" in
+            401) echo "GET / correctly gated by basic auth (nginx up, auth in effect)" ;;
+            200) echo "GET / unexpectedly 200 without auth (auth may be misconfigured)" ;;
+            *) echo "::error::GET / returned $CODE, expected 401 (auth-gated) or 200"; exit 1 ;;
+          esac
           head -c 200 /tmp/witop-staging/root.html; echo
 
       - name: "Smoke - GET /healthz (real SQL)"
