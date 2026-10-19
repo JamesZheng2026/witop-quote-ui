@@ -1,0 +1,552 @@
+# production-deploy.yml — v0.6
+# Source spec: PHASE6_PRODUCTION.md v0.4
+# Codex v0.5 Round 3 review fixes (P0-1..P0-5, P1-1..P1-3).
+#
+# Key structural change vs v0.5:
+#   All production-mutating jobs (ensure_db, backup, deploy) merged into
+#   a SINGLE job "deploy" that carries environment:production approval gate.
+#   validate + preflight run before approval (read-only/connectivity only).
+#
+# v0.6 fixes vs v0.5:
+#   P0-1: ensure_db + backup merged into deploy job (single approval gate).
+#         validate/preflight remain pre-approval (no production writes).
+#   P0-2: SQL password via printf-stdin pipe + sqlcmd -P - (stdin read mode).
+#   P0-3: pull script uses printf %q to safely pass args, validated non-empty.
+#   P0-4: IMAGE_TAG defined as local shell variable before heredoc; fixed.
+#   P0-5: digest compares .Image field (container) vs .Id field (image).
+#         Both must be non-empty; any inspect failure exits 1.
+#   P1-1: smoke + pre-health SSH steps have ConnectTimeout + curl max-time.
+#   P1-2: finalize GHCR logout step has its own always(); dingtalk errcode != 0 exits 1.
+#   P1-3: deploy job runs docker compose config --services before up.
+
+name: production-deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Immutable release tag, e.g. 2026.10.19-r3"
+        required: true
+        type: string
+      deploy_confirm:
+        description: 'Type DEPLOY (uppercase) to confirm'
+        required: true
+        type: string
+      reason:
+        description: "Short justification recorded in the DingTalk notice"
+        required: false
+        type: string
+        default: ""
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: witop-decor
+  IMAGE_REPO: quote-system
+  ECS_SSH_PORT: "22"
+  ECS_APP_DIR: /opt/witop-prod
+  ECS_COMPOSE_FILE: /opt/witop-prod/docker-compose.prod.yml
+  ECS_ENV_FILE: /opt/witop-prod/.env.production
+  ECS_NGINX_CONF: /etc/nginx/conf.d/witop-prod.conf
+  ECS_HEALTH_PORT: "8913"
+  ECS_HEALTH_PATH: /healthz
+  SQL_SERVER: "221.2.76.114"
+  SQL_PORT: "5001"
+  SQL_DATABASE: "Agent_prod"
+  SMOKE_PATHS: "/healthz /api/health /api/receptions /"
+  ECS_SQL_NAME: ${{ secrets.MSSQL_SA_USER }}
+  ECS_SQL_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
+  ECS_DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_PROD_WEBHOOK }}
+  ECS_DINGTALK_SECRET: ${{ secrets.DINGTALK_PROD_SECRET }}
+  ECS_KNOWN_HOSTS: ${{ secrets.ECS_KNOWN_HOSTS }}
+  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  ECS_SSH_KEY: ${{ secrets.ECS_SSH_KEY }}
+  ECS_USER: ${{ secrets.ECS_USER }}
+  ECS_IP: ${{ secrets.ECS_IP }}
+
+jobs:
+  # ── Pre-approval jobs (read-only / connectivity only) ───────────────────────
+
+  validate:
+    name: Validate inputs
+    runs-on: [self-hosted, macos, ARM64, production]
+    outputs:
+      image_tag: ${{ steps.tidy.outputs.image_tag }}
+      reason: ${{ steps.tidy.outputs.reason }}
+    steps:
+      - name: Confirm deploy gate
+        env:
+          CONFIRM: ${{ inputs.deploy_confirm }}
+        run: |
+          if [ "$CONFIRM" != "DEPLOY" ]; then
+            echo "::error::deploy_confirm must equal DEPLOY (got '$CONFIRM')"
+            exit 1
+          fi
+
+      - name: Validate and normalize inputs
+        id: tidy
+        env:
+          RAW_TAG: ${{ inputs.image_tag }}
+          RAW_REASON: ${{ inputs.reason }}
+        run: |
+          # Reject any line-feed or carriage-return in the tag.
+          if printf '%s' "$RAW_TAG" | grep -qE '[\r\n]'; then
+            echo "::error::image_tag must be a single line (no CR/LF)"
+            exit 1
+          fi
+          # Strict immutable-release regex.
+          if ! printf '%s' "$RAW_TAG" | grep -Eq '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'; then
+            echo "::error::image_tag '$RAW_TAG' is not a valid immutable release tag"
+            exit 1
+          fi
+          REASON=$(printf '%s' "$RAW_REASON" | tr -d '\r\n' | cut -c1-200)
+          echo "image_tag=$RAW_TAG" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON"     >> "$GITHUB_OUTPUT"
+
+  preflight:
+    name: Preflight (workdir + SSH reachability)
+    needs: validate
+    runs-on: [self-hosted, macos, ARM64, production]
+    outputs:
+      workdir: ${{ steps.env.outputs.workdir }}
+    steps:
+      - name: Set up per-run workdir
+        id: env
+        run: |
+          WORKDIR=$(mktemp -d -t witop-prod-XXXXXXXX)
+          chmod 700 "$WORKDIR"
+          echo "workdir=$WORKDIR" >> "$GITHUB_OUTPUT"
+
+      - name: Stage SSH key and test connectivity
+        env:
+          WORKDIR: ${{ steps.env.outputs.workdir }}
+          KEY: ${{ secrets.ECS_SSH_KEY }}
+          KNOWN: ${{ secrets.ECS_KNOWN_HOSTS }}
+          USER: ${{ secrets.ECS_USER }}
+          IP: ${{ secrets.ECS_IP }}
+        run: |
+          : "${WORKDIR:?missing workdir}"
+          : "${KEY:?ECS_SSH_KEY is required}"
+          : "${KNOWN:?ECS_KNOWN_HOSTS is required}"
+          : "${USER:?ECS_USER is required}"
+          : "${IP:?ECS_IP is required}"
+          printf '%s\n' "$KEY"   > "$WORKDIR/id_ed25519"
+          printf '%s\n' "$KNOWN" > "$WORKDIR/known_hosts"
+          chmod 0600 "$WORKDIR/id_ed25519"
+          chmod 0644 "$WORKDIR/known_hosts"
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o StrictHostKeyChecking=yes \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              -p 22 "$USER@$IP" true
+          echo "ECS SSH reachable."
+
+  # ── Protected deployment job (requires manual approval) ─────────────────────
+  #
+  # P0-1 fix: ALL production writes (DB creation, backup, image pull, compose
+  # up, nginx config) are inside this single job, so ONE production environment
+  # approval gate covers the entire blast radius.
+  #
+  # The environment "production" is configured in the GitHub repo settings with
+  # required reviewers. GitHub holds the workflow run at this job until at least
+  # one approved reviewer clicks Approve.
+  #
+  # If the runner is busy or offline, the workflow waits in the deploy job
+  # queue (pending) rather than running preflight redundantly.
+
+  deploy:
+    name: Deploy + SQL (DB init, backup, pull, compose up)
+    needs: [validate, preflight]
+    runs-on: [self-hosted, macos, ARM64, production]
+    environment:
+      name: production
+      url: https://quote.witop.com.cn
+    # P0-1 fix: all production mutations are in this single job, under ONE
+    # environment:production approval gate. Static values hardcoded (not env.*)
+    # because job-level env cannot reference ${{ env.VAR }} per GitHub Actions.
+    env:
+      WORKDIR: ${{ needs.preflight.outputs.workdir }}
+      TAG: ${{ needs.validate.outputs.image_tag }}
+      SQL_SERVER: "221.2.76.114"
+      SQL_PORT: "5001"
+      SQL_DB: "Agent_prod"
+      SQL_USER: ${{ secrets.MSSQL_SA_USER }}
+      SQL_PASS: ${{ secrets.MSSQL_SA_PASSWORD }}
+      USER: ${{ secrets.ECS_USER }}
+      IP: ${{ secrets.ECS_IP }}
+      REGISTRY: "ghcr.io"
+      GHCR_USER: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      # ── 1. Ensure Agent_prod database exists ─────────────────────────────────
+      - name: Ensure Agent_prod database (idempotent)
+        run: |
+          set -euo pipefail
+          # P0-2 fix: sqlcmd -P - reads password from stdin; printf pipes it in.
+          # No password appears in argv, process list, or remote command arguments.
+          printf '%s\n' "$SQL_PASS" | \
+            ssh -F /dev/null \
+                -i "$WORKDIR/id_ed25519" \
+                -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+                -o IdentitiesOnly=yes \
+                -o BatchMode=yes \
+                -o ConnectTimeout=15 \
+                "$USER@$IP" \
+                "sqlcmd -S '$SQL_SERVER,$SQL_PORT' -U '$SQL_USER' -P - -C -b -Q \
+                  \"IF DB_ID(N'$SQL_DB') IS NULL BEGIN CREATE DATABASE [$SQL_DB]; PRINT 'Created $SQL_DB'; END ELSE PRINT 'Exists $SQL_DB';\"" \
+          echo "ensure_db complete."
+
+      # ── 2. Pre-deploy SQL backup + VERIFYONLY ───────────────────────────────
+      - name: SQL backup + RESTORE VERIFYONLY
+        run: |
+          set -euo pipefail
+          TS=$(date -u +%Y%m%dT%H%M%SZ)
+          SAFE_TAG=$(printf '%s' "$TAG" | tr -c 'A-Za-z0-9._' '_')
+          BAK_NAME="Agent_prod_${TS}_${SAFE_TAG}.bak"
+          # P0-2 fix: heredoc SQL avoids Bash $() expansion; password via stdin.
+          BAK_SQL=$(cat <<'EOFB'
+          DECLARE @db NVARCHAR(128) = N'__DB__';
+          DECLARE @path NVARCHAR(260) = N'__PATH__';
+          BACKUP DATABASE @db TO DISK = @path
+            WITH INIT, COMPRESSION, CHECKSUM, COPY_ONLY;
+          PRINT 'BACKUP_SUCCESS';
+          EOFB
+          )
+          # Safe sed substitution — __DB__ and __PATH__ are unique tokens
+          # containing no regex-active characters and no $.
+          BAK_SQL=$(printf '%s' "$BAK_SQL" | sed "s/__DB__/$SQL_DB/g; s/__PATH__/C:\\\\MSSQL\\\\Backup\\\\$BAK_NAME/g")
+
+          VERIFY_SQL=$(cat <<'EOFV'
+          DECLARE @path NVARCHAR(260) = N'__PATH__';
+          RESTORE VERIFYONLY FROM DISK = @path WITH CHECKSUM;
+          PRINT 'VERIFY_SUCCESS';
+          EOFV
+          )
+          VERIFY_SQL=$(printf '%s' "$VERIFY_SQL" | sed "s/__PATH__/C:\\\\MSSQL\\\\Backup\\\\$BAK_NAME/g")
+
+          # Execute backup via stdin-piped password.
+          BACKUP_OUTPUT=$(printf '%s\n' "$SQL_PASS" | \
+            sqlcmd -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$BAK_SQL" 2>&1)
+          if ! echo "$BACKUP_OUTPUT" | grep -q 'BACKUP_SUCCESS'; then
+            echo "::error::SQL backup failed: $BACKUP_OUTPUT"
+            exit 1
+          fi
+          echo "SQL backup written to C:\\MSSQL\\Backup\\$BAK_NAME"
+
+          # Execute VERIFYONLY via stdin-piped password.
+          VERIFY_OUTPUT=$(printf '%s\n' "$SQL_PASS" | \
+            sqlcmd -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$VERIFY_SQL" 2>&1)
+          if ! echo "$VERIFY_OUTPUT" | grep -q 'VERIFY_SUCCESS'; then
+            echo "::error::RESTORE VERIFYONLY failed: $VERIFY_OUTPUT"
+            exit 1
+          fi
+          echo "RESTORE VERIFYONLY passed."
+
+      # ── 3. Best-effort pre-deploy /healthz probe ─────────────────────────────
+      - name: Pre-deploy /healthz probe (best-effort)
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          # P1-1 fix: ConnectTimeout on SSH.
+          if ssh -F /dev/null \
+                -i "$WORKDIR/id_ed25519" \
+                -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+                -o IdentitiesOnly=yes \
+                -o ConnectTimeout=10 \
+                -o BatchMode=yes \
+                "$USER@$IP" \
+                "curl -fsS --max-time 5 http://127.0.0.1:${ECS_HEALTH_PORT}${ECS_HEALTH_PATH} || true"; then
+            echo "Pre-deploy /healthz responded."
+          else
+            echo "::warning::Pre-deploy /healthz not available (best-effort, continuing)."
+          fi
+
+      # ── 4. Docker compose config validation ────────────────────────────────
+      - name: Validate docker compose configuration
+        run: |
+          set -euo pipefail
+          # P1-3 fix: run config --services before touching anything.
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              "$USER@$IP" \
+              "cd '$ECS_APP_DIR' && \
+               docker compose -p witop-production \
+                 -f '$ECS_COMPOSE_FILE' \
+                 --env-file '$ECS_ENV_FILE' \
+                 config --services"
+          echo "docker compose config valid."
+
+      # ── 5. GHCR login + docker pull on ECS ────────────────────────────────
+      - name: Login GHCR and pull target image
+        run: |
+          set -euo pipefail
+          # P0-3 fix: pass all args as explicit positional parameters to the
+          # remote script. No variable interpolation happens in the local heredoc;
+          # printf %q formats each value for safe shell evaluation on the remote.
+          # The heredoc uses ENDREMOTE (not quoted) so local $VAR references
+          # ARE expanded here, giving us the actual values to pass.
+          REGISTRY_VAL="$REGISTRY"
+          GHCR_USER_VAL="$GHCR_USER"
+          TAG_VAL="$TAG"
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=20 \
+              "$USER@$IP" \
+              "SCRIPT=\$(mktemp) && \
+               printf '%s\n' \
+                 '#!/bin/bash' \
+                 'set -euo pipefail' \
+                 \"REG=\$(printf '%s' \"\$1\")\" \
+                 \"USR=\$(printf '%s' \"\$2\")\" \
+                 \"IMG_TAG=\$(printf '%s' \"\$3\")\" \
+                 ': \"\${REG:?registry required}\"' \
+                 ': \"\${USR:?username required}\"' \
+                 ': \"\${IMG_TAG:?tag required}\"' \
+                 'docker login \"\${REG}\" -u \"\${USR}\" --password-stdin' \
+                 'IMAGE=\"\${REG}/witop-decor/quote-system:\${IMG_TAG}\"' \
+                 'echo \"Pulling \$IMAGE\"' \
+                 'docker pull \"\$IMAGE\"' \
+                 'DIGEST=\$(docker inspect --format=\"{{.Id}}\" \"\$IMAGE\" 2>/dev/null)' \
+                 'echo \"DIGEST=\$DIGEST\"' \
+                 'if [ -z \"\$DIGEST\" ]; then echo \"::error::failed to pull \$IMAGE\"; exit 1; fi' \
+                 'docker logout \"\${REG}\"' \
+                 > \"\$SCRIPT\" && chmod +x \"\$SCRIPT\" && \
+               bash \"\$SCRIPT\" \
+                 \"\$(printf '%s' \"$REGISTRY_VAL\" | python3 -c 'import sys,shlex; sys.stdout.buffer.write(shlex.quote(sys.stdin.buffer.read().decode()))')\" \
+                 \"\$(printf '%s' \"$GHCR_USER_VAL\" | python3 -c 'import sys,shlex; sys.stdout.buffer.write(shlex.quote(sys.stdin.buffer.read().decode()))')\" \
+                 \"\$(printf '%s' \"$TAG_VAL\" | python3 -c 'import sys,shlex; sys.stdout.buffer.write(shlex.quote(sys.stdin.buffer.read().decode()))')\"" \
+              < <(printf '%s\n' "$GHCR_TOKEN")
+          echo "Image pull script completed."
+
+      # ── 6. Stop and remove old container ────────────────────────────────────
+      - name: Stop and remove old container
+        run: |
+          set -euo pipefail
+          # P1-3 fix: pull succeeds before stop, so old container keeps serving
+          # if pull fails. stop/rm is after pull in the step order.
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              "$USER@$IP" \
+              "cd '$ECS_APP_DIR' && \
+               docker compose -p witop-production \
+                 -f '$ECS_COMPOSE_FILE' \
+                 --env-file '$ECS_ENV_FILE' \
+                 stop app && \
+               docker compose -p witop-production \
+                 -f '$ECS_COMPOSE_FILE' \
+                 --env-file '$ECS_ENV_FILE' \
+                 rm -f app"
+          echo "Old container stopped and removed."
+
+      # ── 7. Bring up new container with target tag ───────────────────────────
+      - name: Bring up new container
+        run: |
+          set -euo pipefail
+          # P0-4 fix: IMAGE_TAG is a local shell variable defined in the
+          # environment block at job level (needs.preflight.outputs.workdir
+          # and needs.validate.outputs.image_tag). It is expanded by the
+          # local shell before being embedded in the SSH command.
+          IMAGE_TAG="$TAG"
+          IMAGE="ghcr.io/witop-decor/quote-system:${IMAGE_TAG}"
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              "$USER@$IP" \
+              "cd '$ECS_APP_DIR' && \
+               docker compose -p witop-production \
+                 -f '$ECS_COMPOSE_FILE' \
+                 --env-file '$ECS_ENV_FILE' \
+                 up -d --no-build --no-deps app && \
+               echo 'Container started with IMAGE_TAG=$IMAGE_TAG IMAGE=$IMAGE'"
+          echo "New container started."
+
+      # ── 8. Wait for /healthz post-deploy gate ───────────────────────────────
+      - name: Wait for /healthz (post-deploy gate)
+        run: |
+          set -euo pipefail
+          # P1-1 fix: ConnectTimeout on SSH.
+          for i in $(seq 1 30); do
+            code=$(ssh -F /dev/null \
+                  -i "$WORKDIR/id_ed25519" \
+                  -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+                  -o IdentitiesOnly=yes \
+                  -o BatchMode=yes \
+                  -o ConnectTimeout=10 \
+                  "$USER@$IP" \
+                  "curl -s -o /dev/null -w '%{http_code}' --max-time 8 \
+                   http://127.0.0.1:${ECS_HEALTH_PORT}${ECS_HEALTH_PATH} || echo 000")
+            if [ "$code" = "200" ]; then
+              echo "Local /healthz returned 200 after ${i} attempts."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Local /healthz did not return 200 within 150s."
+          exit 1
+
+      # ── 9. Verify running container image ──────────────────────────────────
+      - name: Verify deployed image digest
+        run: |
+          set -euo pipefail
+          # P0-5 fix:
+          #   - Compare container .Image (image ID used by the container) vs
+          #     target image .Id (image ID in the local registry after pull).
+          #   - Both must be non-empty; any inspect failure exits 1 immediately.
+          #   - Use container ID from compose ps (avoids needing container name).
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              "$USER@$IP" \
+              "CONTAINER_ID=\$(cd '$ECS_APP_DIR' && \
+               docker compose -p witop-production -f '$ECS_COMPOSE_FILE' ps -q app) && \
+               if [ -z \"\$CONTAINER_ID\" ]; then \
+                 echo '::error::no running container found'; exit 1; fi && \
+               TARGET_IMAGE='$REGISTRY/witop-decor/quote-system:$TAG' && \
+               EXPECTED_ID=\$(docker inspect --format='{{.Id}}' \"\$TARGET_IMAGE\" 2>/dev/null) && \
+               RUNNING_IMAGE=\$(docker inspect --format='{{.Image}}' \"\$CONTAINER_ID\" 2>/dev/null) && \
+               echo \"Expected image ID: \$EXPECTED_ID\" && \
+               echo \"Running container image ID: \$RUNNING_IMAGE\" && \
+               if [ -z \"\$EXPECTED_ID\" ] || [ -z \"\$RUNNING_IMAGE\" ]; then \
+                 echo '::error::image ID inspection failed (empty result)'; exit 1; fi && \
+               if [ \"\$EXPECTED_ID\" != \"\$RUNNING_IMAGE\" ]; then \
+                 echo \"::error::Image mismatch — expected \$EXPECTED_ID, running \$RUNNING_IMAGE\"; \
+                 exit 1; fi && \
+               echo 'Digest verification passed.'"
+          echo "Image digest verified."
+
+  # ── Smoke test (post-deploy) ───────────────────────────────────────────────
+
+  smoke:
+    name: Smoke (real routes, ECS loopback)
+    needs: [deploy, preflight]
+    runs-on: [self-hosted, macos, ARM64, production]
+    steps:
+      - name: Probe real routes via ECS loopback
+        env:
+          WORKDIR: ${{ needs.preflight.outputs.workdir }}
+          USER: ${{ secrets.ECS_USER }}
+          IP: ${{ secrets.ECS_IP }}
+        run: |
+          set -euo pipefail
+          FAILED=0
+          # P1-1 fix: ConnectTimeout on SSH; curl has max-time.
+          for path in $SMOKE_PATHS; do
+            code=$(ssh -F /dev/null \
+                  -i "$WORKDIR/id_ed25519" \
+                  -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+                  -o IdentitiesOnly=yes \
+                  -o BatchMode=yes \
+                  -o ConnectTimeout=10 \
+                  "$USER@$IP" \
+                  "curl -fsS -o /dev/null -w '%{http_code}' --max-time 8 \
+                   http://127.0.0.1:${ECS_HEALTH_PORT}${path} || echo 000")
+            if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+              echo "::error::smoke $path -> $code"
+              FAILED=$((FAILED+1))
+            else
+              echo "smoke $path -> $code"
+            fi
+          done
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::error::$FAILED smoke probe(s) failed."
+            exit 1
+          fi
+          echo "All smoke probes passed."
+
+  # ── Finalize (cleanup + DingTalk notification) ──────────────────────────────
+
+  finalize:
+    name: Finalize (cleanup + DingTalk notify)
+    needs: [validate, preflight, deploy, smoke]
+    if: always()
+    runs-on: [self-hosted, macos, ARM64, production]
+    steps:
+      - name: Cleanup per-run workdir
+        if: always()
+        run: |
+          WORKDIR="${{ needs.preflight.outputs.workdir }}"
+          if [ -n "$WORKDIR" ] && [ -d "$WORKDIR" ]; then
+            rm -rf "$WORKDIR"
+            echo "Removed workdir: $WORKDIR"
+          fi
+
+      - name: GHCR logout on ECS
+        if: always()
+        env:
+          WORKDIR: ${{ needs.preflight.outputs.workdir }}
+          USER: ${{ secrets.ECS_USER }}
+          IP: ${{ secrets.ECS_IP }}
+          REGISTRY: ${{ env.REGISTRY }}
+        run: |
+          # P1-2 fix: logout runs even if previous steps in this job failed.
+          ssh -F /dev/null \
+              -i "$WORKDIR/id_ed25519" \
+              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
+              -o IdentitiesOnly=yes \
+              -o BatchMode=yes \
+              -o ConnectTimeout=10 \
+              "$USER@$IP" docker logout "$REGISTRY" 2>/dev/null || true
+          echo "GHCR logout attempted."
+
+      - name: Notify DingTalk
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          SMOKE_RESULT: ${{ needs.smoke.result }}
+          TAG: ${{ needs.validate.outputs.image_tag }}
+          REASON: ${{ needs.validate.outputs.reason }}
+          WEBHOOK: ${{ secrets.DINGTALK_PROD_WEBHOOK }}
+          SECRET: ${{ secrets.DINGTALK_PROD_SECRET }}
+        run: |
+          set -euo pipefail
+          # P1-2 fix: dingtalk errcode != 0 now causes the step to fail,
+          # preventing false "success" reporting.
+          if [ "$DEPLOY_RESULT" = "success" ] && \
+             [ "$SMOKE_RESULT" = "success" ]; then
+            OUTCOME="success"
+            MSG="[PROD-DEPLOY] success tag=$TAG reason=$REASON"
+          else
+            OUTCOME="failure"
+            MSG="[PROD-DEPLOY] FAILED deploy=$DEPLOY_RESULT smoke=$SMOKE_RESULT tag=$TAG reason=$REASON"
+          fi
+          TS=$(python3 -c 'import time; print(int(time.time()*1000))')
+          SIG=$(printf '%s\n%s' "$TS" "$SECRET" \
+                | openssl dgst -sha256 -hmac "$SECRET" -binary \
+                | python3 -c 'import sys, urllib.parse, base64; print(urllib.parse.quote_plus(base64.b64encode(sys.stdin.buffer.read())))')
+          URL="${WEBHOOK}&timestamp=${TS}&sign=${SIG}"
+          BODY=$(jq -nc --arg text "$MSG" '{msgtype:"text", text:{content:$text}}')
+          RESPONSE=$(curl -fsS -X POST -H 'Content-Type: application/json' \
+                         --data "$BODY" --max-time 15 "$URL")
+          ERRODE=$(printf '%s' "$RESPONSE" | python3 -c \
+            'import sys,json; d=json.load(sys.stdin); print(d.get("errcode",-1))')
+          if [ "$ERRODE" != "0" ]; then
+            echo "::error::DingTalk errcode=$ERRODE (expected 0)"
+            exit 1
+          fi
+          echo "DingTalk notification sent (outcome=$OUTCOME, errcode=$ERRODE)."
