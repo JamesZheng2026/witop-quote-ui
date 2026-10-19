@@ -60,16 +60,8 @@ env:
   SQL_SERVER: "221.2.76.114"
   SQL_PORT: "5001"
   SQL_DATABASE: "Agent_prod"
-  SMOKE_PATHS: "/healthz /api/health /api/receptions /"
-  ECS_SQL_NAME: ${{ secrets.MSSQL_SA_USER }}
-  ECS_SQL_PASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
-  ECS_DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_PROD_WEBHOOK }}
-  ECS_DINGTALK_SECRET: ${{ secrets.DINGTALK_PROD_SECRET }}
-  ECS_KNOWN_HOSTS: ${{ secrets.ECS_KNOWN_HOSTS }}
-  GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  ECS_SSH_KEY: ${{ secrets.ECS_SSH_KEY }}
-  ECS_USER: ${{ secrets.ECS_USER }}
-  ECS_IP: ${{ secrets.ECS_IP }}
+  # Main routes: /healthz (SQL health), /api/receptions, / (root). /api/health does NOT exist.
+  SMOKE_PATHS: "/healthz /api/receptions /"
 
 jobs:
   # ── Pre-approval jobs (read-only / connectivity only) ───────────────────────
@@ -114,6 +106,10 @@ jobs:
     name: Preflight (workdir + SSH reachability)
     needs: validate
     runs-on: [self-hosted, macos, ARM64, production]
+    # Static values needed by preflight steps (no production secrets needed pre-approval).
+    env:
+      ECS_SSH_PORT: "22"
+      ECS_HEALTH_PORT: "8913"
     outputs:
       workdir: ${{ steps.env.outputs.workdir }}
     steps:
@@ -449,6 +445,11 @@ jobs:
     name: Smoke (real routes, ECS loopback)
     needs: [deploy, preflight]
     runs-on: [self-hosted, macos, ARM64, production]
+    # Static values needed by smoke steps. Secrets accessed at step level only.
+    env:
+      ECS_HEALTH_PORT: "8913"
+      ECS_HEALTH_PATH: /healthz
+      SMOKE_PATHS: "/healthz /api/receptions /"
     steps:
       - name: Probe real routes via ECS loopback
         env:
@@ -489,6 +490,9 @@ jobs:
     needs: [validate, preflight, deploy, smoke]
     if: always()
     runs-on: [self-hosted, macos, ARM64, production]
+    # Static values needed by finalize steps. Secrets accessed at step level only.
+    env:
+      REGISTRY: ghcr.io
     steps:
       - name: Cleanup per-run workdir
         if: always()
