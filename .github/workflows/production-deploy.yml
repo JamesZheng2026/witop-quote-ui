@@ -192,28 +192,26 @@ jobs:
       - name: Ensure Agent_prod database (idempotent)
         run: |
           set -euo pipefail
-          # P0-2 fix: sqlcmd -P - reads password from stdin; printf pipes it in.
-          # No password appears in argv, process list, or remote command arguments.
+          # P0-2 fix: Docker Desktop for sqlcmd (Mac has no native sqlcmd).
+          # printf pipes password to sqlcmd stdin (-P -), never in argv.
           printf '%s\n' "$SQL_PASS" | \
-            ssh -F /dev/null \
-                -i "$WORKDIR/id_ed25519" \
-                -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-                -o IdentitiesOnly=yes \
-                -o BatchMode=yes \
-                -o ConnectTimeout=15 \
-                "$USER@$IP" \
-                "sqlcmd -S '$SQL_SERVER,$SQL_PORT' -U '$SQL_USER' -P - -C -b -Q \
-                  \"IF DB_ID(N'$SQL_DB') IS NULL BEGIN CREATE DATABASE [$SQL_DB]; PRINT 'Created $SQL_DB'; END ELSE PRINT 'Exists $SQL_DB';\"" \
+            docker --context desktop-linux run --rm -i \
+              mcr.microsoft.com/mssql-tools:latest \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q \
+              "IF DB_ID(N'$SQL_DB') IS NULL BEGIN CREATE DATABASE [$SQL_DB]; PRINT 'Created $SQL_DB'; END ELSE PRINT 'Exists $SQL_DB';"
           echo "ensure_db complete."
 
       # ── 2. Pre-deploy SQL backup + VERIFYONLY ───────────────────────────────
       - name: SQL backup + RESTORE VERIFYONLY
         run: |
           set -euo pipefail
+          # P0-2 fix: Docker Desktop for sqlcmd (Mac has no native sqlcmd).
           TS=$(date -u +%Y%m%dT%H%M%SZ)
           SAFE_TAG=$(printf '%s' "$TAG" | tr -c 'A-Za-z0-9._' '_')
           BAK_NAME="Agent_prod_${TS}_${SAFE_TAG}.bak"
-          # P0-2 fix: heredoc SQL avoids Bash $() expansion; password via stdin.
+          BAK_PATH="C:\\\\MSSQL\\\\Backup\\\\$BAK_NAME"
+          # heredoc SQL avoids Bash $() expansion.
           BAK_SQL=$(cat <<'EOFB'
           DECLARE @db NVARCHAR(128) = N'__DB__';
           DECLARE @path NVARCHAR(260) = N'__PATH__';
@@ -222,30 +220,34 @@ jobs:
           PRINT 'BACKUP_SUCCESS';
           EOFB
           )
-          # Safe sed substitution — __DB__ and __PATH__ are unique tokens
-          # containing no regex-active characters and no $.
-          BAK_SQL=$(printf '%s' "$BAK_SQL" | sed "s/__DB__/$SQL_DB/g; s/__PATH__/C:\\\\MSSQL\\\\Backup\\\\$BAK_NAME/g")
-
+          # Safe sed substitution — __DB__ and __PATH__ are unique tokens.
+          BAK_SQL=$(printf '%s' "$BAK_SQL" | sed "s/__DB__/$SQL_DB/g; s/__PATH__/$BAK_PATH/g")
           VERIFY_SQL=$(cat <<'EOFV'
           DECLARE @path NVARCHAR(260) = N'__PATH__';
           RESTORE VERIFYONLY FROM DISK = @path WITH CHECKSUM;
           PRINT 'VERIFY_SUCCESS';
           EOFV
           )
-          VERIFY_SQL=$(printf '%s' "$VERIFY_SQL" | sed "s/__PATH__/C:\\\\MSSQL\\\\Backup\\\\$BAK_NAME/g")
+          VERIFY_SQL=$(printf '%s' "$VERIFY_SQL" | sed "s/__PATH__/$BAK_PATH/g")
 
-          # Execute backup via stdin-piped password.
+          # Execute backup: password piped to sqlcmd stdin (-P -).
           BACKUP_OUTPUT=$(printf '%s\n' "$SQL_PASS" | \
-            sqlcmd -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$BAK_SQL" 2>&1)
+            docker --context desktop-linux run --rm -i \
+              mcr.microsoft.com/mssql-tools:latest \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$BAK_SQL" 2>&1)
           if ! echo "$BACKUP_OUTPUT" | grep -q 'BACKUP_SUCCESS'; then
             echo "::error::SQL backup failed: $BACKUP_OUTPUT"
             exit 1
           fi
           echo "SQL backup written to C:\\MSSQL\\Backup\\$BAK_NAME"
 
-          # Execute VERIFYONLY via stdin-piped password.
+          # Execute VERIFYONLY: password piped to sqlcmd stdin.
           VERIFY_OUTPUT=$(printf '%s\n' "$SQL_PASS" | \
-            sqlcmd -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$VERIFY_SQL" 2>&1)
+            docker --context desktop-linux run --rm -i \
+              mcr.microsoft.com/mssql-tools:latest \
+              /opt/mssql-tools/bin/sqlcmd \
+              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$VERIFY_SQL" 2>&1)
           if ! echo "$VERIFY_OUTPUT" | grep -q 'VERIFY_SUCCESS'; then
             echo "::error::RESTORE VERIFYONLY failed: $VERIFY_OUTPUT"
             exit 1
