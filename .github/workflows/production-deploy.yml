@@ -1,23 +1,9 @@
-# production-deploy.yml — v0.6
-# Source spec: PHASE6_PRODUCTION.md v0.4
-# Codex v0.5 Round 3 review fixes (P0-1..P0-5, P1-1..P1-3).
-#
-# Key structural change vs v0.5:
-#   All production-mutating jobs (ensure_db, backup, deploy) merged into
-#   a SINGLE job "deploy" that carries environment:production approval gate.
-#   validate + preflight run before approval (read-only/connectivity only).
-#
-# v0.6 fixes vs v0.5:
-#   P0-1: ensure_db + backup merged into deploy job (single approval gate).
-#         validate/preflight remain pre-approval (no production writes).
-#   P0-2: SQL password via printf-stdin pipe + sqlcmd -P - (stdin read mode).
-#   P0-3: pull script uses printf %q to safely pass args, validated non-empty.
-#   P0-4: IMAGE_TAG defined as local shell variable before heredoc; fixed.
-#   P0-5: digest compares .Image field (container) vs .Id field (image).
-#         Both must be non-empty; any inspect failure exits 1.
-#   P1-1: smoke + pre-health SSH steps have ConnectTimeout + curl max-time.
-#   P1-2: finalize GHCR logout step has its own always(); dingtalk errcode != 0 exits 1.
-#   P1-3: deploy job runs docker compose config --services before up.
+# production-deploy.yml — v0.7 (Phase 6 s1)
+# Shared SQL database plan A: Agent / agent_agent.
+# SQL access is a read-only connectivity gate; all production mutations remain
+# in the single deploy job behind environment:production manual approval.
+# Passwords are inherited through SQLCMDPASSWORD, never command-line values.
+# SSH / remote compose remain the v0.6 baseline pending Phase 6 s6.
 
 name: production-deploy
 
@@ -59,7 +45,7 @@ env:
   ECS_HEALTH_PATH: /healthz
   SQL_SERVER: "221.2.76.114"
   SQL_PORT: "5001"
-  SQL_DATABASE: "Agent_prod"
+  SQL_DATABASE: "Agent"
   # Main routes: /healthz (SQL health), /api/receptions, / (root). /api/health does NOT exist.
   SMOKE_PATHS: "/healthz /api/receptions /"
 
@@ -149,7 +135,7 @@ jobs:
 
   # ── Protected deployment job (requires manual approval) ─────────────────────
   #
-  # P0-1 fix: ALL production writes (DB creation, backup, image pull, compose
+  # ALL production writes (image pull, compose
   # up, nginx config) are inside this single job, so ONE production environment
   # approval gate covers the entire blast radius.
   #
@@ -161,7 +147,7 @@ jobs:
   # queue (pending) rather than running preflight redundantly.
 
   deploy:
-    name: Deploy + SQL (DB init, backup, pull, compose up)
+    name: Deploy + SQL (connectivity, pull, compose up)
     needs: [validate, preflight]
     runs-on: [self-hosted, macos, ARM64, production]
     environment:
@@ -175,82 +161,37 @@ jobs:
       TAG: ${{ needs.validate.outputs.image_tag }}
       SQL_SERVER: "221.2.76.114"
       SQL_PORT: "5001"
-      SQL_DB: "Agent_prod"
-      SQL_USER: ${{ secrets.MSSQL_SA_USER }}
-      SQL_PASS: ${{ secrets.MSSQL_SA_PASSWORD }}
+      SQL_DB: "Agent"
+      SQL_USER: "agent_agent"
       USER: ${{ secrets.ECS_USER }}
       IP: ${{ secrets.ECS_IP }}
       REGISTRY: "ghcr.io"
       GHCR_USER: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      # ── 1. Ensure Agent_prod database exists ─────────────────────────────────
-      - name: Ensure Agent_prod database (idempotent)
+      # ── 1. Read-only shared SQL connectivity gate ───────────────────────────
+      - name: Check shared SQL connectivity (SELECT 1)
+        env:
+          SQLCMDPASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
         run: |
+          set +x
           set -euo pipefail
-          # P0-2 fix: Docker Desktop for sqlcmd (Mac has no native sqlcmd).
-          # printf pipes password to sqlcmd stdin (-P -), never in argv.
-          printf '%s\n' "$SQL_PASS" | \
-            docker --context desktop-linux run --rm -i \
+          : "${SQLCMDPASSWORD:?MSSQL_SA_PASSWORD is required}"
+          # Docker Desktop supplies sqlcmd on the Mac runner. Pass only the
+          # environment variable NAME to Docker; its value never enters argv.
+          # Suppress tool output so failures cannot echo connection credentials.
+          if ! docker --context desktop-linux run --rm \
+              --env SQLCMDPASSWORD \
               mcr.microsoft.com/mssql-tools:latest \
               /opt/mssql-tools/bin/sqlcmd \
-              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q \
-              "IF DB_ID(N'$SQL_DB') IS NULL BEGIN CREATE DATABASE [$SQL_DB]; PRINT 'Created $SQL_DB'; END ELSE PRINT 'Exists $SQL_DB';"
-          echo "ensure_db complete."
-
-      # ── 2. Pre-deploy SQL backup + VERIFYONLY ───────────────────────────────
-      - name: SQL backup + RESTORE VERIFYONLY
-        run: |
-          set -euo pipefail
-          # P0-2 fix: Docker Desktop for sqlcmd (Mac has no native sqlcmd).
-          TS=$(date -u +%Y%m%dT%H%M%SZ)
-          SAFE_TAG=$(printf '%s' "$TAG" | tr -c 'A-Za-z0-9._' '_')
-          BAK_NAME="Agent_prod_${TS}_${SAFE_TAG}.bak"
-          BAK_PATH="C:\\\\MSSQL\\\\Backup\\\\$BAK_NAME"
-          # heredoc SQL avoids Bash $() expansion.
-          BAK_SQL=$(cat <<'EOFB'
-          DECLARE @db NVARCHAR(128) = N'__DB__';
-          DECLARE @path NVARCHAR(260) = N'__PATH__';
-          BACKUP DATABASE @db TO DISK = @path
-            WITH INIT, COMPRESSION, CHECKSUM, COPY_ONLY;
-          PRINT 'BACKUP_SUCCESS';
-          EOFB
-          )
-          # Safe sed substitution — __DB__ and __PATH__ are unique tokens.
-          BAK_SQL=$(printf '%s' "$BAK_SQL" | sed "s/__DB__/$SQL_DB/g; s/__PATH__/$BAK_PATH/g")
-          VERIFY_SQL=$(cat <<'EOFV'
-          DECLARE @path NVARCHAR(260) = N'__PATH__';
-          RESTORE VERIFYONLY FROM DISK = @path WITH CHECKSUM;
-          PRINT 'VERIFY_SUCCESS';
-          EOFV
-          )
-          VERIFY_SQL=$(printf '%s' "$VERIFY_SQL" | sed "s/__PATH__/$BAK_PATH/g")
-
-          # Execute backup: password piped to sqlcmd stdin (-P -).
-          BACKUP_OUTPUT=$(printf '%s\n' "$SQL_PASS" | \
-            docker --context desktop-linux run --rm -i \
-              mcr.microsoft.com/mssql-tools:latest \
-              /opt/mssql-tools/bin/sqlcmd \
-              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$BAK_SQL" 2>&1)
-          if ! echo "$BACKUP_OUTPUT" | grep -q 'BACKUP_SUCCESS'; then
-            echo "::error::SQL backup failed: $BACKUP_OUTPUT"
+              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -d "$SQL_DB" \
+              -C -b -l 15 -Q "SELECT 1;" > /dev/null 2>&1; then
+            echo "::error::Shared SQL connectivity check failed."
             exit 1
           fi
-          echo "SQL backup written to C:\\MSSQL\\Backup\\$BAK_NAME"
+          echo "Shared SQL connectivity check passed."
 
-          # Execute VERIFYONLY: password piped to sqlcmd stdin.
-          VERIFY_OUTPUT=$(printf '%s\n' "$SQL_PASS" | \
-            docker --context desktop-linux run --rm -i \
-              mcr.microsoft.com/mssql-tools:latest \
-              /opt/mssql-tools/bin/sqlcmd \
-              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -P - -C -b -Q "$VERIFY_SQL" 2>&1)
-          if ! echo "$VERIFY_OUTPUT" | grep -q 'VERIFY_SUCCESS'; then
-            echo "::error::RESTORE VERIFYONLY failed: $VERIFY_OUTPUT"
-            exit 1
-          fi
-          echo "RESTORE VERIFYONLY passed."
-
-      # ── 3. Best-effort pre-deploy /healthz probe ─────────────────────────────
+      # ── 2. Best-effort pre-deploy /healthz probe ─────────────────────────────
       - name: Pre-deploy /healthz probe (best-effort)
         continue-on-error: true
         run: |
@@ -269,7 +210,7 @@ jobs:
             echo "::warning::Pre-deploy /healthz not available (best-effort, continuing)."
           fi
 
-      # ── 4. Docker compose config validation ────────────────────────────────
+      # ── 3. Docker compose config validation ────────────────────────────────
       - name: Validate docker compose configuration
         run: |
           set -euo pipefail
@@ -288,7 +229,7 @@ jobs:
                  config --services"
           echo "docker compose config valid."
 
-      # ── 5. GHCR login + docker pull on ECS ────────────────────────────────
+      # ── 4. GHCR login + docker pull on ECS ────────────────────────────────
       - name: Login GHCR and pull target image
         run: |
           set -euo pipefail
@@ -333,7 +274,7 @@ jobs:
               < <(printf '%s\n' "$GHCR_TOKEN")
           echo "Image pull script completed."
 
-      # ── 6. Stop and remove old container ────────────────────────────────────
+      # ── 5. Stop and remove old container ────────────────────────────────────
       - name: Stop and remove old container
         run: |
           set -euo pipefail
@@ -357,7 +298,7 @@ jobs:
                  rm -f app"
           echo "Old container stopped and removed."
 
-      # ── 7. Bring up new container with target tag ───────────────────────────
+      # ── 6. Bring up new container with target tag ───────────────────────────
       - name: Bring up new container
         run: |
           set -euo pipefail
@@ -382,7 +323,7 @@ jobs:
                echo 'Container started with IMAGE_TAG=$IMAGE_TAG IMAGE=$IMAGE'"
           echo "New container started."
 
-      # ── 8. Wait for /healthz post-deploy gate ───────────────────────────────
+      # ── 7. Wait for /healthz post-deploy gate ───────────────────────────────
       - name: Wait for /healthz (post-deploy gate)
         run: |
           set -euo pipefail
@@ -406,7 +347,7 @@ jobs:
           echo "::error::Local /healthz did not return 200 within 150s."
           exit 1
 
-      # ── 9. Verify running container image ──────────────────────────────────
+      # ── 8. Verify running container image ──────────────────────────────────
       - name: Verify deployed image digest
         run: |
           set -euo pipefail
