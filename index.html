@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Witop Decor — AI Quote Processing</title>
+  <title>维特普装饰 · 接待工作台</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script>
@@ -95,225 +95,177 @@
     .reception-stepper-item[data-stage-active="true"] .reception-stepper-label { color: #2563eb; }
     .reception-status-dot { width: 6px; height: 6px; border-radius: 9999px; display: inline-block; flex-shrink: 0; }
     .reception-stepper-sub { font-size: 11px; color: #94a3b8; }
+    /* v4: self-contained layout also works when CDN styles are unavailable. */
+    .hidden { display: none !important; }
+    body { margin: 0; display: flex; background: #e7edf8; }
+    .v4-sidebar { width: 56px; min-width: 56px; min-height: 100vh; background: linear-gradient(#101b55,#15195a); display: flex; flex-direction: column; align-items: center; padding: 14px 0; gap: 6px; }
+    .v4-sidebar nav { display: flex; flex-direction: column; gap: 6px; }
+    .v4-sidebar .sidebar-item, .v4-sidebar .add-btn { width: 44px; height: 44px; border: 0; border-radius: 10px; color: #c8cdea; font-size: 22px; cursor: pointer; background: transparent; }
+    .v4-sidebar .sidebar-item.active { background: #356eef; color: white; box-shadow: 0 4px 12px #3d7bfa59; }
+    .v4-sidebar .sidebar-item:hover { background: #ffffff26; }
+    .v4-sidebar .add-btn { margin-top: auto; border-radius: 50%; background: #ff5a5f; color: white; }
+    .v4-sidebar button:focus-visible, #view-reception-live button:focus-visible { outline: 3px solid #93b8ff; outline-offset: 2px; }
+    body > main { flex: 1; min-width: 0; overflow: auto; }
+    #view-reception-live { padding: 24px 28px 48px; color: #171a20; font: 14px/1.5 -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+    #view-reception-live h1 { font-size: 20px; font-weight: 700; margin: 0; }
+    .live-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .live-logo, .live-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; }
+    .live-logo { width: 38px; height: 38px; color: #5371ad; background: #dce5f8; }
+    .live-header button, .live-tools button { border: 1px solid #dbe2ee; padding: 7px 12px; border-radius: 8px; background: #fff; cursor: pointer; color: #42464e; }
+    .live-header button { margin-left: auto; }
+    .live-stepper { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); margin-bottom: 14px; }
+    .live-step { min-height: 108px; border: 0; text-align: left; padding: 14px 26px 14px 40px; background: #f8fafe; color: #666b73; cursor: pointer; clip-path: polygon(0 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,0 100%,24px 50%); }
+    .live-step:first-child { clip-path: polygon(0 0,calc(100% - 24px) 0,100% 50%,calc(100% - 24px) 100%,0 100%); padding-left: 28px; }
+    .live-step:last-child { clip-path: polygon(0 0,100% 0,100% 100%,0 100%,24px 50%); border-radius: 0 18px 18px 0; }
+    .live-step[aria-pressed="true"] { background: linear-gradient(90deg,#3d7bfa,#3167f2); color: #fff; }
+    .live-step strong { display: block; font-size: 30px; line-height: 1.2; margin: 4px 0; color: #101218; }
+    .live-step[aria-pressed="true"] strong { color: white; }
+    .live-step small { font-size: 12px; }
+    .live-stage-note { margin: 0 0 18px; color: #626e83; font-size: 12px; }
+    .live-list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 10px 0 12px; }
+    .live-list-head h2 { font-size: 18px; font-weight: 700; margin: 0; }
+    .live-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+    .live-tools input, .live-tools select { border: 1px solid #dbe2ee; border-radius: 8px; padding: 7px 10px; background: #fff; color: #42464e; max-width: 100%; }
+    #live-source { color: #626e83; font-size: 12px; margin: 0 0 14px; }
+    #live-source[data-error="true"] { color: #b42318; }
+    #live-cards { display: flex; flex-direction: column; gap: 12px; }
+    .live-card { background: white; border-radius: 16px; padding: 16px 20px; box-shadow: 0 3px 10px #374e7e0d; }
+    .live-card-head { display: grid; grid-template-columns: 52px minmax(0,1fr) auto auto; gap: 14px; align-items: center; padding-bottom: 12px; }
+    .live-avatar { width: 52px; height: 52px; color: white; background: linear-gradient(135deg,#487ed8,#7362db); font-size: 18px; }
+    .live-contact { font-weight: 700; overflow-wrap: anywhere; }
+    .live-meta, .live-channel, .live-owner { color: #6d7178; font-size: 12px; }
+    .live-channel { text-align: center; }
+    .live-wa { display: block; margin: 0 auto 4px; border-radius: 50%; width: 28px; height: 28px; background: #56c75a; color: #fff; line-height: 28px; font-weight: 700; }
+    .live-owner { text-align: right; }
+    .live-owner strong { display: block; color: #454950; font-weight: 500; background: #f0f3f8; border-radius: 10px; padding: 2px 8px; margin-top: 5px; }
+    .live-preview { border-top: 1px solid #eef1f6; padding-top: 10px; display: flex; align-items: center; gap: 8px; color: #3a3f47; font-size: 13px; }
+    .live-preview p { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+    .live-preview button { flex-shrink: 0; background: #356eec; color: white; border: 0; border-radius: 14px; padding: 5px 12px; cursor: pointer; }
+    .live-empty { padding: 40px 20px; text-align: center; background: #f8fafe; border-radius: 16px; color: #6d7178; }
+    #live-detail { width: min(620px,90vw); max-height: 80vh; overflow: auto; padding: 28px; border: 1px solid #dbe2ee; border-radius: 16px; color: #171a20; background: white; }
+    #live-detail::backdrop { background: #0f172a66; }
+    #live-detail-message { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; background: #f5f7fb; border-radius: 8px; }
+    @media(max-width:760px) {
+      #view-reception-live { padding: 18px 14px; }
+      .live-step { padding: 12px 8px 12px 26px; font-size: 12px; }
+      .live-step:first-child { padding-left: 12px; }
+      .live-step strong { font-size: 24px; }
+      .live-step small { font-size: 10px; }
+      .live-card-head { grid-template-columns: 40px minmax(0,1fr); gap: 10px; }
+      .live-avatar { width: 40px; height: 40px; }
+      .live-channel { text-align: left; grid-column: 2; }
+      .live-wa { display: inline-block; margin: 0 6px 0 0; text-align: center; }
+      .live-owner { grid-column: 2; text-align: left; }
+      .live-owner strong { display: inline-block; }
+    }
   </style>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex">
 
   <!-- ===== SIDEBAR ===== -->
-  <aside class="w-56 bg-sidebar text-white flex flex-col flex-shrink-0 no-print" style="min-height:100vh">
-    <div class="p-5 border-b border-slate-700">
-      <div class="text-sm font-bold tracking-wide">WITOP DECOR</div>
-      <div class="text-xs text-slate-400 mt-0.5">AI Quote Processing</div>
-    </div>
-    <nav class="flex-1 py-4">
-      <div class="sidebar-item active px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('dashboard')" id="nav-dashboard">
-        <i class="fas fa-chart-pie w-4 text-slate-400"></i> Dashboard
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiries')" id="nav-inquiries">
-        <i class="fas fa-inbox w-4 text-slate-400"></i> Inquiries
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('inquiry-detail')" id="nav-inquiry-detail">
-        <i class="fas fa-file-lines w-4 text-slate-400"></i> Inquiry Detail
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quote-panel')" id="nav-quote-panel">
-        <i class="fas fa-calculator w-4 text-slate-400"></i> Quote Panel
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('settings')" id="nav-settings">
-        <i class="fas fa-cog w-4 text-slate-400"></i> AI Settings
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('quality-report')" id="nav-quality-report">
-        <i class="fas fa-clipboard-check w-4 text-slate-400"></i> Quality Report
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="showView('reception-workbench')" id="nav-reception-workbench" data-v3="reception-nav">
-        <i class="fas fa-headset w-4 text-slate-400"></i> 接待工作台
-      </div>
-      <div class="sidebar-item px-4 py-2.5 text-sm cursor-pointer flex items-center gap-3" onclick="openReceptionTriggerDrawer()" id="nav-reception-triggers" data-v3="trigger-nav">
-        <i class="fas fa-bolt w-4 text-slate-400"></i> 触发规则
-      </div>
+  <aside class="v4-sidebar no-print" aria-label="主导航">
+    <nav>
+      <button class="sidebar-item active" title="接待工作台" aria-label="接待工作台" onclick="showView('reception-live')" id="nav-reception-live">◈</button>
+      <button class="sidebar-item" title="询盘列表（演示）" aria-label="询盘列表（演示）" onclick="showView('inquiries')" id="nav-inquiries">▤</button>
+      <button class="sidebar-item" title="AI 报价（演示）" aria-label="AI 报价（演示）" onclick="showView('quote-panel')" id="nav-quote-panel">▦</button>
+      <button class="sidebar-item" title="质检报告（演示）" aria-label="质检报告（演示）" onclick="showView('quality-report')" id="nav-quality-report">✓</button>
+      <button class="sidebar-item" title="AI 设置（演示）" aria-label="AI 设置（演示）" onclick="showView('settings')" id="nav-settings">⚙</button>
+      <button class="sidebar-item" title="历史接待演示" aria-label="历史接待演示" onclick="showView('reception-workbench')" id="nav-reception-workbench" data-v3="reception-nav">◷</button>
     </nav>
-    <div class="p-4 border-t border-slate-700">
-      <div class="text-xs text-slate-500">PoC Demo v1.0</div>
-      <div class="text-xs text-slate-500">Witop Decor Co., Ltd.</div>
-    </div>
+    <button class="add-btn" title="添加接待说明" aria-label="添加接待说明" onclick="showView('reception-live'); document.getElementById('live-stage-config').click()">+</button>
   </aside>
 
   <!-- ===== MAIN CONTENT ===== -->
-  <main class="flex-1 overflow-auto min-w-0">
+  <main class="flex-1 overflow-auto min-w-0 dark" style="background:#E7EDF8">
     <div id="ui-error" role="alert" class="hidden m-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"></div>
+
+    <section id="view-reception-live" class="view" aria-label="接待工作台 v4">
+      <header class="live-header"><span class="live-logo" aria-hidden="true">销</span><h1>接待工作台</h1><button type="button" id="live-refresh">刷新数据</button></header>
+      <div class="live-stepper" aria-label="接待流程">
+        <button type="button" class="live-step" id="live-stage-config" data-live-stage="config" aria-pressed="true">输入配置<strong id="live-config-count">—</strong><small>数据源连接</small></button>
+        <button type="button" class="live-step" data-live-stage="assignment" aria-pressed="false">接待分配<strong id="live-assigned-count">—</strong><small>已有关联归属人</small></button>
+        <button type="button" class="live-step" data-live-stage="complete" aria-pressed="false">服务完成<strong>—</strong><small>未提供完成状态</small></button>
+        <button type="button" class="live-step" data-live-stage="records" aria-pressed="false">信息记录<strong id="live-record-count">—</strong><small>已载入会话</small></button>
+      </div>
+      <p id="live-stage-note" class="live-stage-note" aria-live="polite">从已有 WhatsApp 消息读取接待。此入口只读，新增接待需先在消息源产生会话。</p>
+      <div class="live-list-head"><h2>接待列表</h2><div class="live-tools">
+        <input id="live-search" type="search" placeholder="搜索联系人、归属人" aria-label="搜索联系人、归属人">
+        <select id="live-filter" aria-label="按归属人筛选"><option value="all">全部归属人</option><option value="assigned">已分配</option><option value="unassigned">未分配</option></select>
+        <select id="live-sort" aria-label="最近沟通时间排序"><option value="desc">最近沟通优先</option><option value="asc">最早沟通优先</option></select>
+      </div></div>
+      <p id="live-source" role="status" aria-live="polite">正在连接数据源…</p>
+      <section id="live-cards" aria-label="接待卡片" aria-busy="true"></section>
+      <dialog id="live-detail" aria-labelledby="live-detail-title"><h2 id="live-detail-title">接待详情</h2><p id="live-detail-meta"></p><p>最近一条消息</p><div id="live-detail-message"></div><p class="live-meta">消息源未提供服务完成状态与 AI 概要。</p><button type="button" id="live-detail-close">关闭</button></dialog>
+    </section>
 
     <!-- DASHBOARD VIEW -->
     <div id="view-dashboard" class="view p-6">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Inquiry overview &amp; lifecycle funnel</p>
+        <h1 class="text-xl font-bold text-white">接待工作台</h1>
+        <p class="text-sm text-slate-400 mt-0.5">OKKI 四段看板 · 三方质检 · 实时接待状态</p>
       </div>
 
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Inquiries</div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-total">0</div>
-          <div class="text-xs text-slate-400 mt-1">All time</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Handled</div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="stat-handled">0</div>
-          <div class="text-xs text-slate-400 mt-1">Responded</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">High Intent</div>
-          <div class="text-2xl font-bold text-purple-600 dark:text-purple-400" id="stat-highintent">0</div>
-          <div class="text-xs text-slate-400 mt-1">Ready to quote</div>
-        </div>
-        <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Unhandled</div>
-          <div class="text-2xl font-bold text-amber-600 dark:text-amber-400" id="stat-unhandled">0</div>
-          <div class="text-xs text-slate-400 mt-1">Awaiting review</div>
-        </div>
-      </div>
+      <div id="witop-abc-host"></div>
 
-      <!-- Filters -->
-      <div class="card p-4 mb-6">
-        <div class="flex flex-wrap gap-3 items-end">
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Status</label>
-            <select class="input-field" id="dash-filter-status" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="New">New</option>
-              <option value="Reviewed">Reviewed</option>
-              <option value="Quoting">Quoting</option>
-              <option value="Quoted">Quoted</option>
-              <option value="Negotiating">Negotiating</option>
-              <option value="Won">Won</option>
-              <option value="Lost">Lost</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Intent</label>
-            <select class="input-field" id="dash-filter-intent" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="Cold">Cold</option>
-              <option value="Warm">Warm</option>
-              <option value="Hot">Hot</option>
-              <option value="High Intent">High Intent</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Country</label>
-            <select class="input-field" id="dash-filter-country" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="UAE">UAE</option>
-              <option value="Saudi Arabia">Saudi Arabia</option>
-              <option value="USA">USA</option>
-              <option value="UK">UK</option>
-              <option value="Nigeria">Nigeria</option>
-              <option value="Egypt">Egypt</option>
-              <option value="Philippines">Philippines</option>
-              <option value="Vietnam">Vietnam</option>
-              <option value="Germany">Germany</option>
-              <option value="Australia">Australia</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Product</label>
-            <select class="input-field" id="dash-filter-product" onchange="renderDashboard()">
-              <option value="">All</option>
-              <option value="WPC Wall Panel">WPC Wall Panel</option>
-              <option value="SPC Flooring">SPC Flooring</option>
-              <option value="UV Panel">UV Panel</option>
-              <option value="WPC Ceiling">WPC Ceiling</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">From</label>
-            <input type="date" class="input-field" id="dash-filter-from" onchange="renderDashboard()">
-          </div>
-          <div>
-            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">To</label>
-            <input type="date" class="input-field" id="dash-filter-to" onchange="renderDashboard()">
-          </div>
-          <button class="btn btn-secondary btn-sm" onclick="clearDashboardFilters()">Clear</button>
-        </div>
-      </div>
-
-      <!-- Funnel -->
-      <div class="card p-5 mb-6">
-        <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200 mb-4">Inquiry Lifecycle Funnel</h2>
-        <div class="space-y-2.5" id="funnel-container"></div>
-      </div>
-
-      <!-- Recent Activity Table -->
-      <div class="card overflow-hidden">
-        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-600 flex justify-between items-center">
-          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">Recent Inquiries</h2>
-          <button class="btn btn-secondary btn-sm" onclick="showView('inquiries')">View All</button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="data-table w-full">
-            <thead>
-              <tr>
-                <th>ID</th><th>Company</th><th>Country</th><th>Product</th><th>Intent</th><th>Status</th><th>Date</th><th>Quote</th>
-              </tr>
-            </thead>
-            <tbody id="recent-table-body"></tbody>
-          </table>
-        </div>
-      </div>
+      <section id="variant-b" class="hidden"></section>
     </div>
 
     <!-- INQUIRIES VIEW -->
     <div id="view-inquiries" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Inquiry List</h1>
-        <p class="text-sm text-slate-500 mt-0.5">All inquiries — click a row to open Inquiry Detail</p>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">询盘列表</h1>
+        <p class="text-sm text-slate-500 mt-0.5">全部询盘 · 点击行查看详情</p>
       </div>
 
       <div class="flex flex-wrap gap-3 items-end mb-4">
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Search</label>
-          <input type="text" class="input-field" placeholder="Company, country, product..." id="inq-search" oninput="renderInquiries()">
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">搜索</label>
+          <input type="text" class="input-field" placeholder="公司、国家、产品..." id="inq-search" oninput="renderInquiries()">
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Status</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">状态</label>
           <select class="input-field" id="inq-status" onchange="renderInquiries()">
-            <option value="">All</option>
-            <option value="New">New</option>
-            <option value="Reviewed">Reviewed</option>
-            <option value="Quoting">Quoting</option>
-            <option value="Quoted">Quoted</option>
-            <option value="Negotiating">Negotiating</option>
-            <option value="Won">Won</option>
-            <option value="Lost">Lost</option>
+            <option value="">全部</option>
+            <option value="New">新询盘</option>
+            <option value="Reviewed">已审核</option>
+            <option value="Quoting">报价中</option>
+            <option value="Quoted">已报价</option>
+            <option value="Negotiating">议价中</option>
+            <option value="Won">已成交</option>
+            <option value="Lost">已流失</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Intent</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">意向</label>
           <select class="input-field" id="inq-intent" onchange="renderInquiries()">
-            <option value="">All</option>
-            <option value="Cold">Cold</option>
-            <option value="Warm">Warm</option>
-            <option value="Hot">Hot</option>
-            <option value="High Intent">High Intent</option>
+            <option value="">全部</option>
+            <option value="Cold">冷</option>
+            <option value="Warm">温</option>
+            <option value="Hot">热</option>
+            <option value="High Intent">高意向</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Product</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">产品</label>
           <select class="input-field" id="inq-product" onchange="renderInquiries()">
-            <option value="">All</option>
-            <option value="WPC Wall Panel">WPC Wall Panel</option>
-            <option value="SPC Flooring">SPC Flooring</option>
-            <option value="UV Panel">UV Panel</option>
-            <option value="WPC Ceiling">WPC Ceiling</option>
+            <option value="">全部</option>
+            <option value="WPC Wall Panel">WPC 墙板</option>
+            <option value="SPC Flooring">SPC 地板</option>
+            <option value="UV Panel">UV 板</option>
+            <option value="WPC Ceiling">WPC 天花</option>
           </select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Sort By</label>
+          <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">排序</label>
           <select class="input-field" id="inq-sort" onchange="renderInquiries()">
-            <option value="date-desc">Date ↓</option>
-            <option value="date-asc">Date ↑</option>
-            <option value="amount-desc">Amount ↓</option>
-            <option value="amount-asc">Amount ↑</option>
-            <option value="company-asc">Company A-Z</option>
+            <option value="date-desc">日期 ↓</option>
+            <option value="date-asc">日期 ↑</option>
+            <option value="amount-desc">金额 ↓</option>
+            <option value="amount-asc">金额 ↑</option>
+            <option value="company-asc">公司 A-Z</option>
           </select>
         </div>
       </div>
@@ -323,14 +275,14 @@
           <table class="data-table w-full">
             <thead>
               <tr>
-                <th class="cursor-pointer" onclick="sortInquiries('id')">ID <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('company')">Company <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('country')">Country <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('product')">Product <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('intent')">Intent <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('status')">Status <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('date')">Date <i class="fas fa-sort text-xs text-slate-300"></i></th>
-                <th class="cursor-pointer" onclick="sortInquiries('amount')">AI Quote <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('id')">编号 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('company')">公司 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('country')">国家 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('product')">产品 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('intent')">意向 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('status')">状态 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('date')">日期 <i class="fas fa-sort text-xs text-slate-300"></i></th>
+                <th class="cursor-pointer" onclick="sortInquiries('amount')">AI 报价 <i class="fas fa-sort text-xs text-slate-300"></i></th>
               </tr>
             </thead>
             <tbody id="inq-table-body"></tbody>
@@ -343,28 +295,30 @@
     <!-- INQUIRY DETAIL VIEW -->
     <div id="view-inquiry-detail" class="view p-6 hidden">
       <div id="detail-empty" class="card p-10 text-center text-slate-500 dark:text-slate-400">
-        Select an inquiry to see its details.
-        <button type="button" class="btn btn-secondary mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+        请从左侧选择一个询盘查看详情。
+        <button type="button" class="btn btn-secondary mt-3" onclick="showView('inquiries')">查看询盘列表</button>
       </div>
       <div id="detail-content" class="hidden">
         <div id="detail-header" class="mb-6"></div>
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
           <div class="xl:col-span-2 space-y-4">
-            <div class="card p-5"><h2 class="panel-section-title">Customer Snapshot</h2><div id="detail-customer" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div>
-            <div class="card p-5"><h2 class="panel-section-title">Product Specifications</h2><div id="detail-specs" class="grid grid-cols-2 gap-3 text-sm"></div></div>
-            <div class="card p-5" id="detail-history-card"><h2 class="panel-section-title">Quote History Timeline</h2><div id="detail-quote-history"></div></div>
-            <div class="card p-5"><h2 class="panel-section-title">AI Processing Trail</h2><div id="detail-current-state" class="mb-3 text-sm font-semibold"></div><div id="detail-activities"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">客户档案</h2><div id="detail-customer" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">产品规格</h2><div id="detail-specs" class="grid grid-cols-2 gap-3 text-sm"></div></div>
+            <div class="card p-5" id="detail-history-card"><h2 class="panel-section-title">报价历史时间轴</h2><div id="detail-quote-history"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">AI 处理轨迹</h2><div id="detail-current-state" class="mb-3 text-sm font-semibold"></div><div id="detail-activities"></div></div>
           </div>
           <div class="space-y-4">
-            <div class="card p-5"><h2 class="panel-section-title">Quick Actions</h2><div id="detail-actions" class="flex flex-col items-start gap-3"></div>
+            <div class="card p-5">
+              <h2 class="panel-section-title">快捷操作</h2>
+              <div id="detail-actions" class="flex flex-col items-start gap-3"></div>
               <div id="detail-reject-form" class="hidden mt-4">
-                <label for="detail-reject-reason" class="block text-sm mb-2">Rejection reason</label>
-                <textarea id="detail-reject-reason" class="input-field" rows="3" placeholder="Enter a reason..."></textarea>
-                <button type="button" class="btn btn-danger btn-sm mt-2" onclick="confirmDetailReject()">Confirm Rejection</button>
-                <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="cancelDetailReject()">Cancel</button>
+                <label for="detail-reject-reason" class="block text-sm mb-2">拒绝理由</label>
+                <textarea id="detail-reject-reason" class="input-field" rows="3" placeholder="请填写拒绝理由..."></textarea>
+                <button type="button" class="btn btn-danger btn-sm mt-2" onclick="confirmDetailReject()">确认拒绝</button>
+                <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="cancelDetailReject()">取消</button>
               </div>
             </div>
-            <div class="card p-5"><h2 class="panel-section-title">Metadata</h2><div id="detail-metadata" class="space-y-3 text-sm"></div></div>
+            <div class="card p-5"><h2 class="panel-section-title">元信息</h2><div id="detail-metadata" class="space-y-3 text-sm"></div></div>
           </div>
         </div>
       </div>
@@ -373,8 +327,8 @@
     <!-- QUOTE PANEL VIEW -->
     <div id="view-quote-panel" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI Quote Processing</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Select an inquiry from the list or click a row above</p>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI 报价</h1>
+        <p class="text-sm text-slate-500 mt-0.5">从询盘列表选择或点击上方的询盘条目</p>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -384,59 +338,59 @@
           <div id="qp-empty" class="card p-10 text-center">
             <i class="fas fa-inbox text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
             <div class="text-slate-500 dark:text-slate-400 text-sm">Select an inquiry to begin quoting</div>
-            <button type="button" class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">Browse Inquiries</button>
+            <button type="button" class="btn btn-secondary btn-sm mt-3" onclick="showView('inquiries')">查看询盘列表</button>
           </div>
 
           <!-- Buyer Info (shown when inquiry selected) -->
           <div id="qp-buyer" class="hidden">
             <div class="card p-5">
-              <div class="panel-section-title">Buyer Information</div>
+              <div class="panel-section-title">客户信息</div>
               <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Company</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-company">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Country</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-country">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Contact</span><div class="text-slate-700 dark:text-slate-200" id="qp-contact">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Email</span><div class="text-slate-700 dark:text-slate-200" id="qp-email">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Import History</span><div class="text-slate-700 dark:text-slate-200" id="qp-history">—</div></div>
-                <div><span class="text-slate-500 dark:text-slate-400 text-xs">Intent Level</span><div class="mt-0.5" id="qp-intent-badge"></div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">公司</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-company">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">国家</span><div class="font-semibold text-slate-900 dark:text-white" id="qp-country">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">联系人</span><div class="text-slate-700 dark:text-slate-200" id="qp-contact">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">邮箱</span><div class="text-slate-700 dark:text-slate-200" id="qp-email">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">进口历史</span><div class="text-slate-700 dark:text-slate-200" id="qp-history">—</div></div>
+                <div><span class="text-slate-500 dark:text-slate-400 text-xs">意向等级</span><div class="mt-0.5" id="qp-intent-badge"></div></div>
               </div>
             </div>
 
             <div class="card p-5">
-              <div class="panel-section-title">Product Details &amp; Suggested Specs</div>
+              <div class="panel-section-title">产品详情与建议规格</div>
               <div class="space-y-2.5 text-sm">
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Product</span>
+                  <span class="text-slate-500 dark:text-slate-400">产品</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-product">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Quantity</span>
+                  <span class="text-slate-500 dark:text-slate-400">数量</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-qty">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Thickness</span>
+                  <span class="text-slate-500 dark:text-slate-400">厚度</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-thickness">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Width</span>
+                  <span class="text-slate-500 dark:text-slate-400">宽度</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-width">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Length</span>
+                  <span class="text-slate-500 dark:text-slate-400">长度</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-length">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Surface</span>
+                  <span class="text-slate-500 dark:text-slate-400">表面</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-surface">—</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Color/Finish</span>
+                  <span class="text-slate-500 dark:text-slate-400">花色</span>
                   <span class="font-medium text-slate-900 dark:text-white" id="qp-color">—</span>
                 </div>
               </div>
 
               <!-- Notes from buyer -->
               <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-                <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1.5">Buyer Notes</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wide mb-1.5">买家备注</div>
                 <div class="text-sm text-slate-600 dark:text-slate-300 italic" id="qp-notes">—</div>
               </div>
             </div>
@@ -449,76 +403,76 @@
             <!-- AI Quote Breakdown -->
             <div class="card p-5">
               <div class="flex justify-between items-center mb-4">
-                <div class="panel-section-title mb-0">AI-Generated Quote</div>
+                <div class="panel-section-title mb-0">AI 生成报价</div>
                 <div class="flex gap-2">
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> Regenerate</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> Print</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="regenerateQuote()"><i class="fas fa-rotate text-xs"></i> 重新生成</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="printQuote()"><i class="fas fa-print text-xs"></i> 打印</button>
                 </div>
               </div>
 
               <div id="q-breakdown" class="space-y-2 mb-4"></div>
-              <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2"><span id="q-subtotal">$0</span><span>Subtotal</span></div>
-              <div class="flex justify-between text-sm font-bold mt-3"><span id="q-total" class="text-indigo-600 dark:text-indigo-400 text-lg">$0</span><span>Total (FOB)</span></div>
-              <div class="flex justify-between text-sm mt-2 mb-4"><span id="q-unitprice">$0</span><span>USD/sqm</span></div>
+              <div class="flex justify-between text-sm border-t border-slate-200 dark:border-slate-600 pt-2"><span id="q-subtotal">$0</span><span>小计</span></div>
+              <div class="flex justify-between text-sm font-bold mt-3"><span id="q-total" class="text-indigo-600 dark:text-indigo-400 text-lg">$0</span><span>合计（FOB）</span></div>
+              <div class="flex justify-between text-sm mt-2 mb-4"><span id="q-unitprice">$0</span><span>美元/平方米</span></div>
               <div id="q-warnings" class="text-sm text-amber-700 dark:text-amber-300 mb-3" role="status"></div>
 
               <!-- Edit Mode -->
               <div id="q-edit-area" class="hidden bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 mb-4">
-                <div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-3 uppercase tracking-wide">Edit Quote Values</div>
+                <div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-3 uppercase tracking-wide">编辑报价</div>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Material Cost ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">材料成本（$）</label>
                     <input type="number" class="input-field" id="edit-matcost" value="0">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Craft / Labor Cost ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">工艺/人工（$）</label>
                     <input type="number" class="input-field" id="edit-labcost" value="0">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Logistics ($)</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">物流（$）</label>
                     <input type="number" class="input-field" id="edit-logistics" value="0">
                   </div>
                   <div>
-                    <label for="edit-compliance" class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Compliance ($)</label>
+                    <label for="edit-compliance" class="text-xs text-slate-500 dark:text-slate-400 block mb-1">合规（$）</label>
                     <input type="number" class="input-field" id="edit-compliance" value="0" min="0" step="0.01">
                   </div>
                   <div>
-                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">Margin %</label>
+                    <label class="text-xs text-slate-500 dark:text-slate-400 block mb-1">利润率 %</label>
                     <input type="number" class="input-field" id="edit-marginpct" value="20">
                   </div>
                 </div>
                 <div class="mt-3 flex gap-2">
-                  <button type="button" class="btn btn-primary btn-sm" onclick="applyEdit()">Apply</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">Cancel</button>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="applyEdit()">应用</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEdit()">取消</button>
                 </div>
               </div>
 
               <!-- Actions -->
               <div class="flex gap-2 flex-wrap" id="q-actions">
-                <button type="button" class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> Approve Quote</button>
-                <button type="button" class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> Reject</button>
-                <button type="button" class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> Edit</button>
+                <button type="button" class="btn btn-success" onclick="approveQuote()"><i class="fas fa-check"></i> 通过报价</button>
+                <button type="button" class="btn btn-danger" onclick="showRejectForm()"><i class="fas fa-xmark"></i> 拒绝</button>
+                <button type="button" class="btn btn-secondary" onclick="showEditForm()"><i class="fas fa-pen"></i> 编辑</button>
               </div>
 
               <!-- Reject Form -->
               <div id="q-reject-form" class="hidden mt-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
-                <div class="text-xs font-bold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">Rejection Reason</div>
-                <textarea class="input-field mb-3" rows="3" placeholder="Enter reason for rejection..." id="reject-reason"></textarea>
+                <div class="text-xs font-bold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">拒绝理由</div>
+                <textarea class="input-field mb-3" rows="3" placeholder="请填写拒绝理由..." id="reject-reason"></textarea>
                 <div class="flex gap-2">
-                  <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject()">Confirm Rejection</button>
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelReject()">Cancel</button>
+                  <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject()">确认拒绝</button>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="cancelReject()">取消</button>
                 </div>
               </div>
 
               <div class="mt-3 text-xs text-slate-400 dark:text-slate-500" id="q-meta"></div>
             </div>
 
-            <div class="card p-5 mt-4"><div class="panel-section-title">Risk Flags</div><div id="q-risk-flags" class="text-sm text-red-600 dark:text-red-400"></div></div>
-            <div class="card p-5 mt-4"><div class="panel-section-title">Citations</div><div id="q-citations" class="text-sm text-green-600 dark:text-green-400"></div></div>
+            <div class="card p-5 mt-4"><div class="panel-section-title">风险标记</div><div id="q-risk-flags" class="text-sm text-red-600 dark:text-red-400"></div></div>
+            <div class="card p-5 mt-4"><div class="panel-section-title">引用来源</div><div id="q-citations" class="text-sm text-green-600 dark:text-green-400"></div></div>
 
             <!-- Quote History -->
             <div class="card p-5" id="q-history-card">
-              <div class="panel-section-title">Quote History</div>
+              <div class="panel-section-title">报价历史</div>
               <div id="q-history-list"></div>
             </div>
           </div>
@@ -529,76 +483,76 @@
     <!-- AI SETTINGS VIEW -->
     <div id="view-settings" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI Quote Settings</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Configure parameters that drive AI quote generation</p>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">AI 报价设置</h1>
+        <p class="text-sm text-slate-500 mt-0.5">配置驱动 AI 报价生成的参数</p>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div class="card p-5">
-          <div class="panel-section-title">Pricing Rules</div>
+          <div class="panel-section-title">定价规则</div>
           <div class="space-y-4">
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Default Margin %</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">默认利润率 %</label>
               <input type="number" class="input-field" id="s-margin" value="20" min="0" max="100">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Material Pricing Rule</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">材料定价方式</label>
               <select class="input-field" id="s-mat-rule">
-                <option value="fixed">Fixed per sqm</option>
-                <option value="tiered">Tiered by quantity</option>
-                <option value="formula">Custom formula</option>
+                <option value="fixed">按平方米固定</option>
+                <option value="tiered">按数量分档</option>
+                <option value="formula">自定义公式</option>
               </select>
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Material Cost Base (USD/sqm)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">材料基准成本（美元/平方米）</label>
               <input type="number" class="input-field" id="s-mat-cost" value="12.50" step="0.01" min="0">
             </div>
           </div>
         </div>
 
         <div class="card p-5">
-          <div class="panel-section-title">Labor &amp; Logistics</div>
+          <div class="panel-section-title">人工与物流</div>
           <div class="space-y-4">
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Labor Rate (USD/sqm)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">人工费率（美元/平方米）</label>
               <input type="number" class="input-field" id="s-labor" value="3.00" step="0.01" min="0">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Logistics Base (USD/container)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">物流基准（美元/柜）</label>
               <input type="number" class="input-field" id="s-logistics-base" value="3500" step="100" min="0">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Container Size (sqm)</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">单柜装载（平方米）</label>
               <input type="number" class="input-field" id="s-container-sqm" value="700" step="10" min="0">
             </div>
           </div>
         </div>
 
         <div class="card p-5">
-          <div class="panel-section-title">Region Adjustments</div>
+          <div class="panel-section-title">区域调整</div>
           <div class="space-y-2.5">
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">UAE</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">阿联酋</span>
               <input type="number" class="input-field flex-1" id="adj-UAE" value="0" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">Saudi Arabia</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">沙特</span>
               <input type="number" class="input-field flex-1" id="adj-Saudi Arabia" value="0" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">USA</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">美国</span>
               <input type="number" class="input-field flex-1" id="adj-USA" value="5" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">UK</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">英国</span>
               <input type="number" class="input-field flex-1" id="adj-UK" value="5" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
             <div class="flex gap-2 items-center text-sm">
-              <span class="w-24 text-slate-600 dark:text-slate-300">Australia</span>
+              <span class="w-24 text-slate-600 dark:text-slate-300">澳大利亚</span>
               <input type="number" class="input-field flex-1" id="adj-Australia" value="5" step="0.5">
               <span class="text-xs text-slate-400 w-8">%</span>
             </div>
@@ -606,12 +560,12 @@
         </div>
 
         <div class="card p-5">
-          <div class="panel-section-title">AI Model &amp; Behavior</div>
+          <div class="panel-section-title">AI 模型与行为</div>
           <div class="space-y-4">
-            <div><label for="s-ai-provider" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Provider</label><select id="s-ai-provider" class="input-field"></select></div>
-            <div><label for="s-ai-api-key" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">API Key (memory only)</label><input id="s-ai-api-key" type="password" class="input-field" autocomplete="off" placeholder="This key stays in memory only"><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">LLM routes are placeholders. Use a placeholder value for this demo.</p></div>
+            <div><label for="s-ai-provider" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI 提供方</label><select id="s-ai-provider" class="input-field"></select></div>
+            <div><label for="s-ai-api-key" class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">API Key（仅内存）</label><input id="s-ai-api-key" type="password" class="input-field" autocomplete="off" placeholder="此 Key 仅保存在内存中"><p class="text-xs text-slate-500 dark:text-slate-400 mt-1">LLM 路由为占位实现，演示阶段请填写占位值。</p></div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI Model</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">AI 模型</label>
               <select class="input-field" id="s-ai-model">
                 <option value="gpt-4o">GPT-4o</option>
                 <option value="claude-sonnet">Claude Sonnet</option>
@@ -620,16 +574,16 @@
               </select>
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Confidence Threshold</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">置信度阈值</label>
               <input type="number" class="input-field" id="s-confidence" value="0.7" step="0.05" min="0" max="1">
             </div>
             <div>
-              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Auto-Quote Threshold</label>
+              <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">自动报价阈值</label>
               <select class="input-field" id="s-auto-quote">
-                <option value="high">High Intent only</option>
-                <option value="hot">Hot &amp; High Intent</option>
-                <option value="all">All reviewed inquiries</option>
-                <option value="none">Manual only</option>
+                <option value="high">仅高意向</option>
+                <option value="hot">热询+高意向</option>
+                <option value="all">全部已审核询盘</option>
+                <option value="none">仅人工</option>
               </select>
             </div>
           </div>
@@ -637,51 +591,51 @@
       </div>
 
       <div class="mt-6 flex gap-3">
-        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Settings</button>
-        <button class="btn btn-secondary" onclick="resetSettings()">Reset to Defaults</button>
-        <span class="text-xs text-green-600 dark:text-green-400 self-center hidden" id="s-saved-msg"><i class="fas fa-check mr-1"></i> Saved!</span>
+        <button class="btn btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> 保存设置</button>
+        <button class="btn btn-secondary" onclick="resetSettings()">恢复默认</button>
+        <span class="text-xs text-green-600 dark:text-green-400 self-center hidden" id="s-saved-msg"><i class="fas fa-check mr-1"></i> 已保存</span>
       </div>
     </div>
 
     <!-- QUALITY REPORT VIEW -->
     <div id="view-quality-report" class="view p-6 hidden">
       <div class="mb-6">
-        <h1 class="text-xl font-bold text-slate-900 dark:text-white">Quality Inspection Report</h1>
-        <p class="text-sm text-slate-500 mt-0.5">Quote processing metrics &amp; inspector performance</p>
-        <button type="button" class="btn btn-secondary mt-3" onclick="exportQualityJSON()">Export JSON</button>
+        <h1 class="text-xl font-bold text-slate-900 dark:text-white">质检报告</h1>
+        <p class="text-sm text-slate-500 mt-0.5">报价处理指标与质检员表现</p>
+        <button type="button" class="btn btn-secondary mt-3" onclick="exportQualityJSON()">导出 JSON</button>
       </div>
 
       <!-- Summary Cards -->
       <div class="grid grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Total Quotes</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">报价总数</div>
           <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-total">0</div>
         </div>
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Approved</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">已通过</div>
           <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="r-approved">0</div>
         </div>
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Rejected</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">已拒绝</div>
           <div class="text-2xl font-bold text-red-600 dark:text-red-400" id="r-rejected">0</div>
         </div>
         <div class="stat-card">
-          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Processing Time</div>
-          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-avgtime">0m</div>
+          <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">平均处理时长</div>
+          <div class="text-2xl font-bold text-slate-900 dark:text-white" id="r-avgtime">0分</div>
         </div>
-        <div class="stat-card"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Avg. Quality Score</div><div id="r-avgquality" class="text-2xl font-bold text-slate-900 dark:text-white">0</div></div>
+        <div class="stat-card"><div class="text-xs text-slate-500 dark:text-slate-400 mb-1">平均质检评分</div><div id="r-avgquality" class="text-2xl font-bold text-slate-900 dark:text-white">0</div></div>
       </div>
 
       <!-- Quote Records Table -->
       <div class="card overflow-hidden mb-6">
         <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-600">
-          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">Recent Quote Decisions</h2>
+          <h2 class="font-semibold text-sm text-slate-700 dark:text-slate-200">近期报价决策</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="data-table w-full">
             <thead>
               <tr>
-                <th>Inquiry ID</th><th>Company</th><th>Product</th><th>Quote Amount</th><th>Status</th><th>Processing Time</th><th>Inspector</th><th>Date</th><th>Quality / Deductions</th>
+                <th>询盘编号</th><th>公司</th><th>产品</th><th>报价金额</th><th>状态</th><th>处理时长</th><th>质检员</th><th>日期</th><th>质检/扣分</th>
               </tr>
             </thead>
             <tbody id="report-table-body"></tbody>
@@ -862,8 +816,9 @@
   </div>
 
 
-<script src="scripts/state.js"></script>
-<script src="scripts/reception-bridge.js"></script>
+<script src="scripts/state.js?v=8b89e90-1791856622"></script>
+<script src="scripts/reception-bridge.js?v=8b89e90-1791856622"></script>
+<script src="scripts/okki-adapter.js?v=8b89e90-1791856622"></script>
 <script>
 // V3-01b Visual QA helper: ?view=reception-workbench&drawer=REC-001&trigger=1
 // 仅在 file:// + 包含 ?view= 时生效, 跑完即清. 不影响正常使用.
@@ -1056,7 +1011,7 @@ function init() {
   persist();
   applySettings();
   renderDashboard();
-  showView('dashboard');
+  showView('reception-live');
 }
 
 const LEGAL_TRANSITIONS = {
@@ -1166,7 +1121,7 @@ function showView(name) {
   const nav = document.getElementById('nav-' + name);
   if (nav) nav.classList.add('active');
 
-  if (name === 'dashboard') renderDashboard();
+  if (name === 'dashboard') { renderDashboard(); if (window.witopRenderVariants) window.witopRenderVariants(); }
   else if (name === 'inquiries') renderInquiries();
   else if (name === 'settings') renderSettings();
   else if (name === 'quality-report') renderReport();
@@ -1180,6 +1135,10 @@ function showView(name) {
 // ============================================================
 
 function renderDashboard() {
+  // V3-ABC: dashboard view 已被 A/B/C variants 接管；保留函数以兼容其它视图潜在调用，缺失 DOM 时静默
+  if (!document.getElementById('stat-total') && !document.getElementById('funnel-container') && !document.getElementById('recent-table-body')) {
+    return
+  }
   const fs = getDashboardFilters();
   const filtered = filterInquiries(inquiries, fs);
 
@@ -1188,10 +1147,12 @@ function renderDashboard() {
   const highIntent = inquiries.filter(i => i.intent === 'High Intent').length;
   const unhandled = inquiries.filter(i => i.status === 'New').length;
 
-  document.getElementById('stat-total').textContent = total.toLocaleString();
-  document.getElementById('stat-handled').textContent = handled.toLocaleString();
-  document.getElementById('stat-highintent').textContent = highIntent.toLocaleString();
-  document.getElementById('stat-unhandled').textContent = unhandled.toLocaleString();
+  function setText(id, v) { var el = document.getElementById(id); if (el) el.textContent = v }
+  function setHTML(id, v) { var el = document.getElementById(id); if (el) el.innerHTML = v }
+  setText('stat-total', total.toLocaleString());
+  setText('stat-handled', handled.toLocaleString());
+  setText('stat-highintent', highIntent.toLocaleString());
+  setText('stat-unhandled', unhandled.toLocaleString());
 
   // Funnel
   const stages = STATUSES.map(status => ({ label: status, count: inquiries.filter(i => i.status === status).length, color: STATUS_COLORS[status] }));
@@ -1205,27 +1166,27 @@ function renderDashboard() {
       </div>
     </div>`;
   }).join('');
-  document.getElementById('funnel-container').innerHTML = funnelHTML;
+  setHTML('funnel-container', funnelHTML);
 
   // Recent table
   const recent = [...inquiries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
-  const tbody = document.getElementById('recent-table-body');
-  tbody.innerHTML = recent.map(i => tableRowHTML(i)).join('');
+  setHTML('recent-table-body', recent.map(i => tableRowHTML(i)).join(''));
 }
 
 function getDashboardFilters() {
+  function v(id) { var el = document.getElementById(id); return el ? el.value : '' }
   return {
-    status: document.getElementById('dash-filter-status').value,
-    intent: document.getElementById('dash-filter-intent').value,
-    country: document.getElementById('dash-filter-country').value,
-    product: document.getElementById('dash-filter-product').value,
-    from: document.getElementById('dash-filter-from').value,
-    to: document.getElementById('dash-filter-to').value,
+    status:  v('dash-filter-status'),
+    intent:  v('dash-filter-intent'),
+    country: v('dash-filter-country'),
+    product: v('dash-filter-product'),
+    from:    v('dash-filter-from'),
+    to:      v('dash-filter-to'),
   };
 }
 
 function clearDashboardFilters() {
-  ['dash-filter-status','dash-filter-intent','dash-filter-country','dash-filter-product','dash-filter-from','dash-filter-to'].forEach(id => document.getElementById(id).value = '');
+  ['dash-filter-status','dash-filter-intent','dash-filter-country','dash-filter-product','dash-filter-from','dash-filter-to'].forEach(id => { var el = document.getElementById(id); if (el) el.value = '' });
   renderDashboard();
 }
 
@@ -1775,35 +1736,35 @@ const RECEPTION_REQUIREMENT_FIELDS = ['qty', 'usage', 'cycle', 'customization', 
 const MOCK_RECEPTION = [
   // ---- 接待中 (5) ----
   {
-    id: 'REC-001', company: 'Atlas Bay Holdings', country: 'UAE', channel: 'email', receptionStatus: 'reception',
+    id: 'REC-001', company: 'Atlas Bay Holdings', country: 'UAE', channel: 'email', receptionStatus: 'reception', qcStatus: 'pending',
     lastContactAt: '2026-10-11 09:42', qty: '3,200 sqm', usage: 'Commercial tower lobby', cycle: '60 days',
     customization: 'Custom walnut color + matching trim', overseasMode: 'Importer / wholesaler',
     summary: '买家倾向 8mm 共挤板，需要 60 天内交付，目的港 Jebel Ali。已确认数量与用途，等待报价。',
     needsHandoff: false
   },
   {
-    id: 'REC-002', company: 'Northwind Interiors', country: 'UK', channel: 'mixed', receptionStatus: 'reception',
+    id: 'REC-002', company: 'Northwind Interiors', country: 'UK', channel: 'mixed', receptionStatus: 'reception', qcStatus: 'pending',
     lastContactAt: '2026-10-11 11:18', qty: '1,500 sqm', usage: 'Hotel guest-room renovation', cycle: '45 days',
     customization: '—', overseasMode: '—',
     summary: '酒店翻新项目，预算偏紧；待收集定制需求与海外经营模式。建议下一步：发送初步报价。',
     needsHandoff: false
   },
   {
-    id: 'REC-003', company: 'Greenline Trading FZE', country: 'UAE', channel: 'whatsapp', receptionStatus: 'reception',
+    id: 'REC-003', company: 'Greenline Trading FZE', country: 'UAE', channel: 'whatsapp', receptionStatus: 'reception', qcStatus: 'pending',
     lastContactAt: '2026-10-11 12:05', qty: '待收集', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: 'WhatsApp 来询，缺基础字段。建议下一步：礼貌回访补全采购数量与用途。',
     needsHandoff: false
   },
   {
-    id: 'REC-004', company: 'Riyadh Stone & Decor', country: 'Saudi Arabia', channel: 'email', receptionStatus: 'reception',
+    id: 'REC-004', company: 'Riyadh Stone & Decor', country: 'Saudi Arabia', channel: 'email', receptionStatus: 'reception', qcStatus: 'pending',
     lastContactAt: '2026-10-10 16:30', qty: '500 sqm', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '首次来询；用途/周期未确认。建议下一步：自动回访模板 + AI 背调。',
     needsHandoff: false
   },
   {
-    id: 'REC-005', company: 'Cairo Decorative Panels', country: 'Egypt', channel: 'mixed', receptionStatus: 'reception',
+    id: 'REC-005', company: 'Cairo Decorative Panels', country: 'Egypt', channel: 'mixed', receptionStatus: 'reception', qcStatus: 'pending',
     lastContactAt: '2026-10-10 14:11', qty: '4,200 sqm', usage: 'Government project · payment via LC', cycle: '90 days',
     customization: 'SGS inspection required', overseasMode: 'Government procurement',
     summary: '历史老客户；本周复访谈细节。建议下一步：发送正式 SGS 合规报价。',
@@ -1812,83 +1773,95 @@ const MOCK_RECEPTION = [
 
   // ---- 转人工 (3) ----
   {
-    id: 'REC-006', company: 'Hanoi Construction Materials', country: 'Vietnam', channel: 'whatsapp', receptionStatus: 'handoff',
+    id: 'REC-006', company: 'Hanoi Construction Materials', country: 'Vietnam', channel: 'whatsapp', receptionStatus: 'handoff', qcStatus: 'in_review',
     lastContactAt: '2026-10-11 10:55', qty: '300 sqm', usage: 'Sample order · interior design showcase', cycle: '21 days',
     customization: 'Matte black + custom edging', overseasMode: '—',
     summary: '客诉倾向高（议价 + 期望快速样品），AI 已触发转人工。等待销售 James 接手。',
     needsHandoff: true, handoffReason: '议价激烈 + 期望样品加速'
   },
   {
-    id: 'REC-007', company: 'Pacific Coast Flooring', country: 'USA', channel: 'email', receptionStatus: 'handoff',
+    id: 'REC-007', company: 'Pacific Coast Flooring', country: 'USA', channel: 'email', receptionStatus: 'handoff', qcStatus: 'in_review',
     lastContactAt: '2026-10-11 08:20', qty: '3,200 sqm', usage: 'Residential SPC project', cycle: '45 days',
     customization: 'Click system, Grey Oak', overseasMode: 'Distributor',
     summary: '美国分销商；要求 SGS + 样品，AI 转人工等销售评估区域风险。',
     needsHandoff: true, handoffReason: '区域风险评估'
   },
   {
-    id: 'REC-008', company: 'Lagos Premium Interiors', country: 'Nigeria', channel: 'mixed', receptionStatus: 'handoff',
+    id: 'REC-008', company: 'Lagos Premium Interiors', country: 'Nigeria', channel: 'mixed', receptionStatus: 'handoff', qcStatus: 'in_review',
     lastContactAt: '2026-10-10 22:48', qty: '400 sqm', usage: 'Hotel lobby decoration', cycle: '—',
     customization: '—', overseasMode: '—',
     summary: '缺关键字段（周期 / 海外经营模式），AI 转人工等销售直接对接。',
     needsHandoff: true, handoffReason: '关键信息缺失'
   },
 
-  // ---- 人工已接手 (3) ----
+  // ---- 交付人工 / 质检中 (3) ----
   {
-    id: 'REC-009', company: 'Kingfisher Supplies Ltd', country: 'UK', channel: 'email', receptionStatus: 'handled',
+    id: 'REC-009', company: 'Kingfisher Supplies Ltd', country: 'UK', channel: 'email', receptionStatus: 'handled', qcStatus: 'passed',
     lastContactAt: '2026-10-11 07:05', qty: '1,800 sqm', usage: 'Hotel fit-out', cycle: '21 days',
     customization: '12mm High Gloss White', overseasMode: 'UK retailer',
-    summary: '人工已接手：销售已发出 21 天加急方案，等待客户回复。',
+    summary: '质检通过：销售已发出 21 天加急方案，等待客户回复。',
     needsHandoff: false, handledBy: 'James Zheng'
   },
   {
-    id: 'REC-010', company: 'Manila Hardware Corp', country: 'Philippines', channel: 'whatsapp', receptionStatus: 'handled',
+    id: 'REC-010', company: 'Manila Hardware Corp', country: 'Philippines', channel: 'whatsapp', receptionStatus: 'handled', qcStatus: 'passed',
     lastContactAt: '2026-10-10 18:33', qty: '2,000 sqm', usage: 'Residential complex', cycle: '30 days',
     customization: 'UV Coating Natural Oak', overseasMode: 'Reseller',
-    summary: '已转销售并完成规格确认，等待 PI 出具。',
+    summary: '质检通过：已转销售并完成规格确认，等待 PI 出具。',
     needsHandoff: false, handledBy: 'James Zheng'
   },
   {
-    id: 'REC-011', company: 'Bavaria Baustoffe GmbH', country: 'Germany', channel: 'email', receptionStatus: 'handled',
+    id: 'REC-011', company: 'Bavaria Baustoffe GmbH', country: 'Germany', channel: 'email', receptionStatus: 'handled', qcStatus: 'passed',
     lastContactAt: '2026-10-10 11:14', qty: '8,000 sqm', usage: 'Apartment complex', cycle: '75 days',
     customization: 'CE-marked SPC, Click system', overseasMode: 'EU distributor',
-    summary: '大单 — 销售已分段排产 + CE 文档准备中。',
+    summary: '质检通过：大单 — 销售已分段排产 + CE 文档准备中。',
     needsHandoff: false, handledBy: 'James Zheng'
   },
 
-  // ---- 已拦截 (3) ----
+  // ---- 质检未通过 (3) ----
   {
-    id: 'REC-012', company: 'Spam Sender — Invest.co', country: 'unknown', channel: 'email', receptionStatus: 'blocked',
+    id: 'REC-012', company: 'Spam Sender — Invest.co', country: 'unknown', channel: 'email', receptionStatus: 'blocked', qcStatus: 'failed',
     lastContactAt: '2026-10-11 06:12', qty: '—', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
-    summary: '拦截原因：邮件来源被标记为批量推广模板，建议持续拦截。',
+    summary: '质检未通过：邮件来源被标记为批量推广模板，建议持续拦截。',
     needsHandoff: false, blockedReason: 'Bulk promotional template'
   },
   {
-    id: 'REC-013', company: 'Coin-Bot / Trade Crypto Signals', country: 'unknown', channel: 'whatsapp', receptionStatus: 'blocked',
+    id: 'REC-013', company: 'Coin-Bot / Trade Crypto Signals', country: 'unknown', channel: 'whatsapp', receptionStatus: 'blocked', qcStatus: 'failed',
     lastContactAt: '2026-10-11 03:50', qty: '—', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
-    summary: '拦截原因：来自非白名单号段，含加密/资金类话术。',
+    summary: '质检未通过：来自非白名单号段，含加密/资金类话术。',
     needsHandoff: false, blockedReason: 'Off-whitelist crypto/finance chatter'
   },
   {
-    id: 'REC-014', company: 'Generic Africa Importer', country: 'Egypt', channel: 'email', receptionStatus: 'blocked',
+    id: 'REC-014', company: 'Generic Africa Importer', country: 'Egypt', channel: 'email', receptionStatus: 'blocked', qcStatus: 'failed',
     lastContactAt: '2026-10-10 17:00', qty: '—', usage: '—', cycle: '—',
     customization: '—', overseasMode: '—',
-    summary: '拦截原因：买家背景检查未通过（公司域名注册 < 90 天）。',
+    summary: '质检未通过：买家背景检查未通过（公司域名注册 < 90 天）。',
     needsHandoff: false, blockedReason: 'Domain age < 90 days, AI back-trace failed'
   }
 ];
 
-// Filter helper for v3-01.
+// Mock supplies customer fields and initial states; bridge owns live statuses.
+function effectiveReceptionRecords() {
+  if (!window.ReceptionBridge) return MOCK_RECEPTION.slice();
+  return MOCK_RECEPTION.map(record => {
+    const receptionStatus = window.ReceptionBridge.getUiState(record.id);
+    return { ...record, receptionStatus, needsHandoff: receptionStatus === 'handoff',
+      handoffReason: receptionStatus === 'handoff' ? (record.handoffReason || 'Manual forward from reception list') : undefined,
+      handledBy: receptionStatus === 'handled' ? record.handledBy : undefined,
+      blockedReason: receptionStatus === 'blocked' ? record.blockedReason : undefined };
+  });
+}
+
 function receptionList(filterStatus) {
-  if (!filterStatus || filterStatus === 'all') return MOCK_RECEPTION.slice();
-  return MOCK_RECEPTION.filter(r => r.receptionStatus === filterStatus);
+  const records = effectiveReceptionRecords();
+  if (!filterStatus || filterStatus === 'all') return records;
+  return records.filter(r => r.receptionStatus === filterStatus);
 }
 
 function receptionCounts() {
   const counts = { reception: 0, handoff: 0, handled: 0, blocked: 0, total: 0 };
-  MOCK_RECEPTION.forEach(r => {
+  effectiveReceptionRecords().forEach(r => {
     counts[r.receptionStatus] = (counts[r.receptionStatus] || 0) + 1;
     counts.total++;
   });
@@ -2011,10 +1984,20 @@ function renderReceptionWorkbench() {
   const counter = document.getElementById('reception-count');
   if (empty) empty.hidden = rows.length > 0;
   if (counter) counter.textContent = '共 ' + counts.total + ' 条 — 当前 ' + receptionReceptionStatusLabel(receptionActiveTab) + ' ' + rows.length + ' 条';
+  if (window.ReceptionBridge) window.ReceptionBridge.updateStepper(receptionActiveTab);
+  if (receptionSelectedRecord) {
+    const selectedChannel = receptionActiveChannel;
+    openReceptionDetail(receptionSelectedRecord.id);
+    setReceptionChannel(selectedChannel);
+  }
 }
 
-// Action stubs (Mock — UI only, do not mutate persistence in v3-01).
+// Live actions use the bridge. Keep standalone V3-01 mock fallback if unloaded.
 function receptionForwardHandoff(id) {
+  if (!receptionList('all').some(r => r.id === id)) return;
+  if (window.ReceptionBridge) {
+    return window.ReceptionBridge.dispatchTrigger(id, 'transfer_to_human', { actor: 'ui-button', note: 'Manual forward from reception list' });
+  }
   const rec = MOCK_RECEPTION.find(r => r.id === id);
   if (!rec) return;
   rec.receptionStatus = 'handoff';
@@ -2024,6 +2007,11 @@ function receptionForwardHandoff(id) {
 }
 
 function receptionRevert(id) {
+  const record = receptionList('all').find(r => r.id === id);
+  if (!record) return;
+  if (window.ReceptionBridge) {
+    return window.ReceptionBridge.dispatchTrigger(id, record.receptionStatus === 'blocked' ? 'reopen' : 'cancel_transfer', { actor: 'ui-button', note: 'Restore reception from list' });
+  }
   const rec = MOCK_RECEPTION.find(r => r.id === id);
   if (!rec) return;
   rec.receptionStatus = 'reception';
@@ -2074,7 +2062,7 @@ function renderReceptionChannelBody(record, channel) {
 }
 
 function openReceptionDetail(id) {
-  const record = MOCK_RECEPTION.find(r => r.id === id);
+  const record = receptionList('all').find(r => r.id === id);
   if (!record) return;
   receptionSelectedRecord = record;
 
@@ -2147,6 +2135,7 @@ function openReceptionTriggerDrawer() {
 window.MOCK_RECEPTION = MOCK_RECEPTION;
 window.RECEPTION_STATUSES = RECEPTION_STATUSES;
 window.RECEPTION_STATUS_LABELS = RECEPTION_STATUS_LABELS;
+window.MOCK_INQUIRIES = MOCK_INQUIRIES;
 
 // ============================================================
 // UTILITIES
@@ -2163,6 +2152,160 @@ if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').match
 }
 
 init();
+</script>
+<script src="scripts/variants.js?v=8b89e90-1791856622"></script>
+<script>
+// v4 live data is kept separate from the historical demo and its local state machine.
+(function () {
+  'use strict';
+  const byId = id => document.getElementById(id);
+  const cards = byId('live-cards');
+  const source = byId('live-source');
+  let records = [];
+  let loading = false;
+  let connected = false;
+  let selectedStage = 'config';
+  const notes = {
+    config: '从已有 WhatsApp 消息读取接待。此入口只读，新增接待需先在消息源产生会话。',
+    assignment: '显示已有关联归属人的会话。归属人来自消息记录，尚未开放修改分配。',
+    complete: '消息源未提供服务完成状态，暂无法统计；下方继续展示会话记录。',
+    records: '每张卡片展示一个会话的最近消息；没有生成 AI 概要。'
+  };
+  function element(tag, className, value) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (value !== undefined) node.textContent = value;
+    return node;
+  }
+  function timestamp(value) {
+    // Only parse unambiguous ISO dates. Other source timestamps stay as supplied.
+    if (!value) return '时间未提供';
+    if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+      const date = new Date(value);
+      if (Number.isFinite(date.getTime())) return date.toLocaleString('zh-CN', { hour12: false });
+    }
+    return String(value);
+  }
+  function openDetail(record) {
+    byId('live-detail-title').textContent = record.contact;
+    byId('live-detail-meta').textContent = 'WhatsApp · 归属人：' + (record.assignee || '未分配') + ' · ' + timestamp(record.lastContactAt) + ' · ' + record.messageCount + ' 条消息';
+    byId('live-detail-message').textContent = record.latestMessage || '暂无文本消息';
+    const dialog = byId('live-detail');
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  }
+  byId('live-detail-close').addEventListener('click', () => {
+    const dialog = byId('live-detail');
+    if (typeof dialog.close === 'function') dialog.close();
+    else dialog.removeAttribute('open');
+  });
+  function render() {
+    cards.replaceChildren();
+    byId('live-config-count').textContent = connected ? '1' : '—';
+    byId('live-assigned-count').textContent = connected ? String(records.filter(r => r.assignee).length) : '—';
+    byId('live-record-count').textContent = connected ? String(records.length) : '—';
+    const search = byId('live-search').value.trim().toLocaleLowerCase();
+    const filter = byId('live-filter').value;
+    const rows = records.filter(r => (r.contact + ' ' + (r.assignee || '')).toLocaleLowerCase().includes(search))
+      .filter(r => filter === 'all' || (filter === 'assigned' ? !!r.assignee : !r.assignee))
+      .sort((a, b) => {
+        const order = String(a.lastContactAt || '').localeCompare(String(b.lastContactAt || ''));
+        return byId('live-sort').value === 'asc' ? order : -order;
+      });
+    if (!rows.length) {
+      cards.append(element('div', 'live-empty', loading ? '正在读取接待记录…' :
+        connected ? '当前条件没有接待记录' : '暂未载入接待记录，请检查数据源后刷新。'));
+    }
+    rows.forEach(record => {
+      const card = element('article', 'live-card');
+      card.dataset.liveRecordId = record.id;
+      const head = element('div', 'live-card-head');
+      const who = element('div');
+      who.append(element('div', 'live-contact', record.contact), element('div', 'live-meta', record.messageCount + ' 条消息'));
+      const channel = element('div', 'live-channel');
+      channel.append(element('span', 'live-wa', 'W'), element('span', '', 'WhatsApp · ' + timestamp(record.lastContactAt)));
+      const owner = element('div', 'live-owner', '服务状态未提供');
+      owner.append(element('strong', '', '归属人：' + (record.assignee || '未分配')));
+      head.append(element('div', 'live-avatar', record.contact.slice(0, 2).toUpperCase()), who, channel, owner);
+      const preview = element('div', 'live-preview');
+      const button = element('button', '', '查看消息');
+      button.type = 'button';
+      button.setAttribute('aria-label', '查看 ' + record.contact + ' 的最近消息');
+      button.addEventListener('click', () => openDetail(record));
+      preview.append(element('span', 'live-meta', '最近消息'), element('p', '', record.latestMessage || '暂无文本消息'), button);
+      card.append(head, preview);
+      cards.append(card);
+    });
+  }
+  const errors = {
+    SQL_DRIVER_MISSING: '数据源驱动未就绪，请联系管理员。',
+    SQL_CONFIG_MISSING: '数据源尚未配置，请联系管理员。',
+    SQL_MAPPING_REQUIRED: '消息字段尚未匹配，请联系管理员核验字段。',
+    SQL_SCHEMA_AMBIGUOUS: '消息表尚未确认，请联系管理员。'
+  };
+  async function refresh() {
+    if (loading) return;
+    loading = true;
+    connected = false;
+    records = [];
+    byId('live-refresh').disabled = true;
+    cards.setAttribute('aria-busy', 'true');
+    source.dataset.error = 'false';
+    source.textContent = '正在读取接待数据…';
+    // Clear the previous message when changing snapshots or losing connectivity.
+    byId('live-detail-close').click();
+    byId('live-detail-title').textContent = '接待详情';
+    byId('live-detail-meta').textContent = '';
+    byId('live-detail-message').textContent = '';
+    render();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 35000);
+    try {
+      const response = await fetch('/api/receptions', { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(errors[data.error] || '数据源连接失败，请稍后刷新或联系管理员。');
+      if (!data.ok || data.source !== 'sqlserver' || !Array.isArray(data.records) ||
+        !Number.isInteger(data.total) || data.total < data.records.length ||
+        data.records.some(r => typeof r.id !== 'string' || typeof r.contact !== 'string' ||
+          (r.assignee !== null && typeof r.assignee !== 'string') ||
+          r.channel !== 'whatsapp' || typeof r.latestMessage !== 'string' ||
+          (r.lastContactAt !== null && typeof r.lastContactAt !== 'string') ||
+          !Number.isSafeInteger(r.messageCount) || r.messageCount < 1)) {
+        throw new Error('接待数据格式异常，请联系管理员。');
+      }
+      connected = true;
+      records = data.records;
+      source.textContent = 'SQL Server · 已载入最近 ' + records.length + ' / ' + data.total + ' 个会话 · ' +
+        '筛选与统计基于已载入会话 · 更新于 ' + timestamp(data.fetchedAt);
+    } catch (error) {
+      source.dataset.error = 'true';
+      // Only display our fixed messages, never raw network or database exception text.
+      const safeMessages = new Set([...Object.values(errors), '接待数据格式异常，请联系管理员。', '数据源连接失败，请稍后刷新或联系管理员。']);
+      source.textContent = safeMessages.has(error.message) ? error.message : '数据源连接失败，请稍后刷新或联系管理员。';
+    } finally {
+      clearTimeout(timeout);
+      loading = false;
+      byId('live-refresh').disabled = false;
+      cards.setAttribute('aria-busy', 'false');
+      render();
+    }
+  }
+  document.querySelectorAll('[data-live-stage]').forEach(button => button.addEventListener('click', () => {
+    selectedStage = button.dataset.liveStage;
+    document.querySelectorAll('[data-live-stage]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    byId('live-stage-note').textContent = notes[selectedStage];
+    byId('live-filter').value = selectedStage === 'assignment' ? 'assigned' : 'all';
+    render();
+  }));
+  byId('live-search').addEventListener('input', render);
+  byId('live-filter').addEventListener('change', render);
+  byId('live-sort').addEventListener('change', render);
+  byId('live-refresh').addEventListener('click', refresh);
+  render();
+  // Historical jsdom regressions have no fetch. They still exercise the original demo.
+  if (typeof window.fetch === 'function') refresh();
+  else { loading = false; cards.setAttribute('aria-busy', 'false'); source.textContent = '请通过本地接待服务打开工作台。'; }
+})();
 </script>
 </body>
 </html>

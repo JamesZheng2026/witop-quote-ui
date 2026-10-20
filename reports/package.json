@@ -1,0 +1,14 @@
+{
+  "name": "witop-reception-regression-tests",
+  "private": true,
+  "scripts": {
+    "test": "node test-channel-preserve.cjs",
+    "test:history": "node test-channel-preserve.cjs --two-phase"
+  },
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.2"
+  }
+}

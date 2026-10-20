@@ -1,0 +1,10 @@
+# actionlint configuration for production-deploy.yml
+# Self-hosted runner labels used in the production workflow:
+#   - self-hosted, macos, ARM64, production
+#   (all 4 labels must match for the runner to pick up the job)
+self-hosted-runner:
+  labels:
+    - self-hosted
+    - macos
+    - ARM64
+    - production
