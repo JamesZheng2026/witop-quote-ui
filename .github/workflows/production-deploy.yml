@@ -3,12 +3,12 @@
 # SQL access is a read-only connectivity gate; all production mutations remain
 # in the single deploy job behind environment:production manual approval.
 #
-# Stage 1 topology — no remote host, no registry:
+# Stage 1 topology — no remote host; images stay on the local Docker daemon:
 #   host nginx (witop-stage1.conf, listen 8913, Basic Auth)
 #     -> 127.0.0.1:8765  ==  this container
 # The image is built locally with `docker build` and started with
-# `docker compose up` on the self-hosted Mac Studio runner. Nothing is pushed to
-# a registry and nothing is pulled from one.
+# `docker compose up` on the self-hosted Mac Studio runner. Nothing is uploaded
+# to or downloaded from a remote image store.
 #
 # macOS runner wiring (proven by staging-deploy.yml, v2):
 #   - DOCKER_HOST must point at the Docker Desktop socket; the default context
@@ -90,8 +90,9 @@ jobs:
           RAW_TAG: ${{ inputs.image_tag }}
           RAW_REASON: ${{ inputs.reason }}
         run: |
-          # Reject any line-feed or carriage-return in the tag.
-          if printf '%s' "$RAW_TAG" | grep -qE '[\r\n]'; then
+          # Match literal control characters explicitly: BSD grep treats \r and
+          # \n inside a bracket expression as the letters "r" and "n".
+          if [[ "$RAW_TAG" == *$'\r'* || "$RAW_TAG" == *$'\n'* ]]; then
             echo "::error::image_tag must be a single line (no CR/LF)"
             exit 1
           fi
@@ -261,14 +262,59 @@ jobs:
         run: |
           set -euo pipefail
           docker build \
-            --build-arg NODE_IMAGE=node:22.23.3-bookworm-slim \
             --tag "$WITOP_APP_IMAGE" \
             --file ./Dockerfile \
             .
           echo "Built $WITOP_APP_IMAGE"
           docker images "$WITOP_APP_IMAGE" --format 'tag={{.Tag}} size={{.Size}}'
 
-      # --- 6. Free port 8765 --------------------------------------------------
+      # --- 6. Capture rollback state before replacing the runtime --------------
+      - name: Capture rollback state
+        run: |
+          set -euo pipefail
+          OLD_APP_CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -aq app)
+          OLD_APP_IMAGE=""
+          OLD_APP_IMAGE_ID=""
+          OLD_APP_CONTAINER_RUNNING=false
+          if [ -n "$OLD_APP_CONTAINER_ID" ]; then
+            OLD_APP_IMAGE=$(docker inspect --format='{{.Config.Image}}' \
+              "$OLD_APP_CONTAINER_ID")
+            OLD_APP_IMAGE_ID=$(docker inspect --format='{{.Image}}' \
+              "$OLD_APP_CONTAINER_ID")
+            OLD_APP_CONTAINER_RUNNING=$(docker inspect --format='{{.State.Running}}' \
+              "$OLD_APP_CONTAINER_ID")
+          fi
+
+          OLD_LAUNCHD_RUNNING=false
+          LAUNCHD_STATE=$(launchctl print \
+            "gui/$(id -u)/com.witop.reception-v4" 2>/dev/null || true)
+          if grep -q 'state = running' <<< "$LAUNCHD_STATE"; then
+            OLD_LAUNCHD_RUNNING=true
+          fi
+
+          {
+            echo "ROLLBACK_READY=true"
+            echo "OLD_APP_CONTAINER_ID=$OLD_APP_CONTAINER_ID"
+            echo "OLD_APP_IMAGE=$OLD_APP_IMAGE"
+            echo "OLD_APP_IMAGE_ID=$OLD_APP_IMAGE_ID"
+            echo "OLD_APP_CONTAINER_RUNNING=$OLD_APP_CONTAINER_RUNNING"
+            echo "OLD_LAUNCHD_RUNNING=$OLD_LAUNCHD_RUNNING"
+          } >> "$GITHUB_ENV"
+          echo "Rollback snapshot: container=${OLD_APP_CONTAINER_ID:-none} image=${OLD_APP_IMAGE:-none} running=$OLD_APP_CONTAINER_RUNNING"
+          echo "Rollback snapshot: launchd_running=$OLD_LAUNCHD_RUNNING"
+
+      # --- 7. Stop the old compose runtime ------------------------------------
+      - name: Stop and remove old container
+        run: |
+          set -euo pipefail
+          # The build and rollback snapshot both succeed before this step, so a
+          # failed replacement can still recreate the prior image by image ID.
+          # Tolerate a first run where nothing is deployed yet.
+          docker compose -f "$COMPOSE_FILE" stop app || true
+          docker compose -f "$COMPOSE_FILE" rm -f app || true
+          echo "Old container stopped and removed (if any)."
+
+      # --- 8. Free port 8765 --------------------------------------------------
       - name: Stop local service holding port 8765
         run: |
           set -euo pipefail
@@ -289,24 +335,13 @@ jobs:
             exit 1
           fi
 
-      # --- 7. Replace the old container ---------------------------------------
-      - name: Stop and remove old container
-        run: |
-          set -euo pipefail
-          # P1-3 fix: the build succeeds before this step, so the old container
-          # keeps serving if the build fails.
-          # Tolerate a first run where nothing is deployed yet.
-          docker compose -f "$COMPOSE_FILE" stop app || true
-          docker compose -f "$COMPOSE_FILE" rm -f app || true
-          echo "Old container stopped and removed (if any)."
-
       - name: Bring up new container
         run: |
           set -euo pipefail
           docker compose -f "$COMPOSE_FILE" up -d --no-build --no-deps app
           echo "Started $WITOP_APP_IMAGE on 127.0.0.1:$APP_PORT."
 
-      # --- 8. Post-deploy /healthz gate ---------------------------------------
+      # --- 9. Post-deploy /healthz gate ---------------------------------------
       - name: Wait for app container healthy and /healthz 200
         run: |
           set -euo pipefail
@@ -344,7 +379,7 @@ jobs:
             "http://127.0.0.1:$APP_PORT/healthz")
           echo "GET /healthz -> $BODY"
 
-      # --- 9. Verify running container image -----------------------------------
+      # --- 10. Verify running container image ----------------------------------
       - name: Verify deployed image digest
         run: |
           set -euo pipefail
@@ -368,6 +403,84 @@ jobs:
             exit 1
           fi
           echo "Digest verification passed."
+
+      # --- 11. Restore the prior runtime if replacement fails ------------------
+      - name: Roll back failed deployment
+        if: failure()
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if [ "${ROLLBACK_READY:-false}" != "true" ]; then
+            echo "::warning::Rollback skipped: runtime snapshot was not completed."
+            exit 0
+          fi
+
+          wait_for_port() {
+            local elapsed=0
+            while [ "$elapsed" -lt 60 ]; do
+              if lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+                echo "Port $APP_PORT is listening after ${elapsed}s."
+                return 0
+              fi
+              sleep 1
+              elapsed=$((elapsed+1))
+            done
+            echo "::error::rollback did not restore a listener on port $APP_PORT within 60s"
+            return 1
+          }
+
+          restore_old_container() {
+            CURRENT_ID=$(docker compose -f "$COMPOSE_FILE" ps -aq app 2>/dev/null || true)
+            CURRENT_RUNNING=false
+            if [ -n "$CURRENT_ID" ]; then
+              CURRENT_RUNNING=$(docker inspect --format='{{.State.Running}}' \
+                "$CURRENT_ID" 2>/dev/null || echo false)
+            fi
+            if [ "$CURRENT_ID" = "$OLD_APP_CONTAINER_ID" ] \
+                && [ "$CURRENT_RUNNING" = "true" ]; then
+              wait_for_port
+              echo "Rollback preserved the still-running prior container $OLD_APP_CONTAINER_ID ($OLD_APP_IMAGE)."
+              return 0
+            fi
+
+            docker compose -f "$COMPOSE_FILE" stop app || true
+            docker compose -f "$COMPOSE_FILE" rm -f app || true
+            WITOP_APP_IMAGE="$OLD_APP_IMAGE_ID" \
+              docker compose -f "$COMPOSE_FILE" up -d --no-build --no-deps app
+            RESTORED_ID=$(docker compose -f "$COMPOSE_FILE" ps -q app)
+            RESTORED_IMAGE_ID=$(docker inspect --format='{{.Image}}' "$RESTORED_ID")
+            if [ -z "$RESTORED_ID" ] || [ "$RESTORED_IMAGE_ID" != "$OLD_APP_IMAGE_ID" ]; then
+              echo "::error::rollback container does not use the prior image ID"
+              return 1
+            fi
+            wait_for_port
+            echo "Rollback restored prior container image $OLD_APP_IMAGE ($OLD_APP_IMAGE_ID)."
+          }
+
+          if [ "${OLD_APP_CONTAINER_RUNNING:-false}" = "true" ] \
+              && [ -n "${OLD_APP_IMAGE_ID:-}" ]; then
+            restore_old_container
+            exit 0
+          fi
+
+          docker compose -f "$COMPOSE_FILE" stop app || true
+          docker compose -f "$COMPOSE_FILE" rm -f app || true
+          if [ "${OLD_LAUNCHD_RUNNING:-false}" = "true" ]; then
+            launchctl bootstrap "gui/$(id -u)" \
+              "$HOME/Library/LaunchAgents/com.witop.reception-v4.plist" || true
+            wait_for_port
+            LAUNCHD_STATE=$(launchctl print \
+              "gui/$(id -u)/com.witop.reception-v4" 2>/dev/null || true)
+            if ! grep -q 'state = running' <<< "$LAUNCHD_STATE"; then
+              echo "::error::launchd rollback service is not running"
+              exit 1
+            fi
+            echo "Rollback restored launchd service com.witop.reception-v4."
+          elif [ -n "${OLD_APP_IMAGE_ID:-}" ]; then
+            restore_old_container
+          else
+            echo "::warning::Rollback found no previously running container or launchd service to restore."
+          fi
 
   # ── Smoke test (post-deploy) ───────────────────────────────────────────────
 
@@ -410,7 +523,7 @@ jobs:
     runs-on: [self-hosted, macos, ARM64, production]
     steps:
       # The deployed container is left running on purpose; there is nothing to
-      # tear down, no registry session to close, and no per-run key material.
+      # tear down, no remote image-store session, and no per-run key material.
       - name: Notify DingTalk
         env:
           DEPLOY_RESULT: ${{ needs.deploy.result }}

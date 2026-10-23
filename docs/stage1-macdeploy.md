@@ -43,9 +43,9 @@ SQL Server  221.2.76.114:5001   database=Agent   user=agent_agent
 /Users/james/witop-prod/secrets/sqlserver_config.json    mode 0600
 ```
 
-bind-mount 进容器 `/run/secrets/sqlserver_config.json`（只读）。容器只拿到**路径**，
-拿不到值；workflow 只打印路径和 `stat` 权限，**不回显内容**。SQL 探测走
-`SQLCMDPASSWORD` 环境变量传密码，不进 argv。
+bind-mount 进容器 `/run/secrets/sqlserver_config.json`（只读）。环境变量只拿到**路径**；
+容器内进程可通过只读 bind mount 读取 secret 内容。workflow 只打印路径和 `stat`
+权限，**不回显内容**。SQL 探测走 `SQLCMDPASSWORD` 环境变量传密码，不进 argv。
 
 ## 端口 8765 的占用者
 
