@@ -1,9 +1,24 @@
-# production-deploy.yml — v0.7 (Phase 6 s1)
+# production-deploy.yml — v0.8 (Phase 6 Stage 1, Mac Studio local deploy)
 # Shared SQL database plan A: Agent / agent_agent.
 # SQL access is a read-only connectivity gate; all production mutations remain
 # in the single deploy job behind environment:production manual approval.
+#
+# Stage 1 topology — no remote host, no registry:
+#   host nginx (witop-stage1.conf, listen 8913, Basic Auth)
+#     -> 127.0.0.1:8765  ==  this container
+# The image is built locally with `docker build` and started with
+# `docker compose up` on the self-hosted Mac Studio runner. Nothing is pushed to
+# a registry and nothing is pulled from one.
+#
+# macOS runner wiring (proven by staging-deploy.yml, v2):
+#   - DOCKER_HOST must point at the Docker Desktop socket; the default context
+#     resolves to /var/run/docker.sock, which does not exist on macOS.
+#   - docker/setup-buildx-action is NOT used. buildx calls the osxkeychain
+#     credential helper for every base-image pull, and a launchd-run runner has
+#     no keychain session, so builds fail. Plain `docker build` does not use it.
+#   - ~/.docker/config.json is removed before building so no credsStore remains.
+#
 # Passwords are inherited through SQLCMDPASSWORD, never command-line values.
-# SSH / remote compose remain the v0.6 baseline pending Phase 6 s6.
 
 name: production-deploy
 
@@ -30,24 +45,25 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAMESPACE: witop-decor
-  IMAGE_REPO: quote-system
-  ECS_SSH_PORT: "22"
-  ECS_APP_DIR: /opt/witop-prod
-  ECS_COMPOSE_FILE: /opt/witop-prod/docker-compose.prod.yml
-  ECS_ENV_FILE: /opt/witop-prod/.env.production
-  ECS_NGINX_CONF: /etc/nginx/conf.d/witop-prod.conf
-  ECS_HEALTH_PORT: "8913"
-  ECS_HEALTH_PATH: /healthz
+  # Deployment root on the runner. The runner is uid 501 (james), so $HOME is
+  # writable without sudo and /opt is not.
+  APP_DIR: /Users/james/witop-prod
+  COMPOSE_FILE: /Users/james/witop-prod/docker-compose.prod.yml
+  # SQL Server lives on the Witop LAN; the app needs outbound routing to it.
   SQL_SERVER: "221.2.76.114"
   SQL_PORT: "5001"
   SQL_DATABASE: "Agent"
+  SQL_USER: "agent_agent"
+  # Container-local port, published to loopback only. 8913 (host nginx, Basic
+  # Auth) is never probed by CI: an unauthenticated request there returns 401.
+  APP_PORT: "8765"
   # Main routes: /healthz (SQL health), /api/receptions, / (root). /api/health does NOT exist.
   SMOKE_PATHS: "/healthz /api/receptions /"
+  # /healthz cold start is ~4.5s because the bridge spawns python per request,
+  # and the image HEALTHCHECK allows 35s. Smoke must not time out below that.
+  SMOKE_MAX_TIME: "40"
 
 jobs:
   # ── Pre-approval jobs (read-only / connectivity only) ───────────────────────
@@ -89,55 +105,45 @@ jobs:
           echo "reason=$REASON"     >> "$GITHUB_OUTPUT"
 
   preflight:
-    name: Preflight (workdir + SSH reachability)
+    name: Preflight (Docker daemon + port 8765 survey)
     needs: validate
     runs-on: [self-hosted, macos, ARM64, production]
-    # Static values needed by preflight steps (no production secrets needed pre-approval).
     env:
-      ECS_SSH_PORT: "22"
-      ECS_HEALTH_PORT: "8913"
-    outputs:
-      workdir: ${{ steps.env.outputs.workdir }}
+      # Docker Desktop on macOS: default context -> /var/run/docker.sock (missing).
+      # Set DOCKER_HOST so all docker commands use the real desktop socket.
+      DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
     steps:
-      - name: Set up per-run workdir
-        id: env
+      - name: Preflight - docker available on runner
         run: |
-          WORKDIR=$(mktemp -d -t witop-prod-XXXXXXXX)
-          chmod 700 "$WORKDIR"
-          echo "workdir=$WORKDIR" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "::error::docker not found on runner. Install Docker Desktop, see DOCKER_SETUP.md"
+            exit 1
+          fi
+          if ! docker info >/dev/null 2>&1; then
+            echo "::error::docker daemon not reachable. Start Docker Desktop and retry."
+            exit 1
+          fi
+          echo "docker $(docker --version) ready"
 
-      - name: Stage SSH key and test connectivity
-        env:
-          WORKDIR: ${{ steps.env.outputs.workdir }}
-          KEY: ${{ secrets.ECS_SSH_KEY }}
-          KNOWN: ${{ secrets.ECS_KNOWN_HOSTS }}
-          USER: ${{ secrets.ECS_USER }}
-          IP: ${{ secrets.ECS_IP }}
+      - name: Preflight - survey current port 8765 holder (read-only)
         run: |
-          : "${WORKDIR:?missing workdir}"
-          : "${KEY:?ECS_SSH_KEY is required}"
-          : "${KNOWN:?ECS_KNOWN_HOSTS is required}"
-          : "${USER:?ECS_USER is required}"
-          : "${IP:?ECS_IP is required}"
-          printf '%s\n' "$KEY"   > "$WORKDIR/id_ed25519"
-          printf '%s\n' "$KNOWN" > "$WORKDIR/known_hosts"
-          chmod 0600 "$WORKDIR/id_ed25519"
-          chmod 0644 "$WORKDIR/known_hosts"
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o StrictHostKeyChecking=yes \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              -p 22 "$USER@$IP" true
-          echo "ECS SSH reachable."
+          set -euo pipefail
+          # Informational only. The deploy job stops the launchd service that
+          # owns 8765 before compose publishes it.
+          HOLDER=$(lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN 2>/dev/null || true)
+          if [ -n "$HOLDER" ]; then
+            echo "Port $APP_PORT currently held by:"
+            echo "$HOLDER"
+          else
+            echo "Port $APP_PORT is free."
+          fi
 
   # ── Protected deployment job (requires manual approval) ─────────────────────
   #
-  # ALL production writes (image pull, compose
-  # up, nginx config) are inside this single job, so ONE production environment
-  # approval gate covers the entire blast radius.
+  # ALL production writes (image build, secret staging, container replace) are
+  # inside this single job, so ONE production environment approval gate covers
+  # the entire blast radius.
   #
   # The environment "production" is configured in the GitHub repo settings with
   # required reviewers. GitHub holds the workflow run at this job until at least
@@ -147,29 +153,55 @@ jobs:
   # queue (pending) rather than running preflight redundantly.
 
   deploy:
-    name: Deploy + SQL (connectivity, pull, compose up)
+    name: Deploy + SQL (connectivity, build, compose up)
     needs: [validate, preflight]
     runs-on: [self-hosted, macos, ARM64, production]
     environment:
       name: production
       url: https://quote.witop.com.cn
     # P0-1 fix: all production mutations are in this single job, under ONE
-    # environment:production approval gate. Static values hardcoded (not env.*)
-    # because job-level env cannot reference ${{ env.VAR }} per GitHub Actions.
+    # environment:production approval gate. Static values are inherited from the
+    # workflow-level env block because job-level env cannot reference ${{ env.* }}.
     env:
-      WORKDIR: ${{ needs.preflight.outputs.workdir }}
+      DOCKER_HOST: unix:///Users/james/.docker/run/docker.sock
       TAG: ${{ needs.validate.outputs.image_tag }}
-      SQL_SERVER: "221.2.76.114"
-      SQL_PORT: "5001"
-      SQL_DB: "Agent"
-      SQL_USER: "agent_agent"
-      USER: ${{ secrets.ECS_USER }}
-      IP: ${{ secrets.ECS_IP }}
-      REGISTRY: "ghcr.io"
-      GHCR_USER: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Local immutable tag. Never pushed; compose resolves it from this daemon.
+      WITOP_APP_IMAGE: witop-production:${{ needs.validate.outputs.image_tag }}
+      # Fixed in-container path, matching docker-compose.prod.yml.
+      SQLSERVER_CONFIG: /run/secrets/sqlserver_config.json
+      SQLSERVER_CONFIG_FILE: /Users/james/witop-prod/secrets/sqlserver_config.json
     steps:
-      # ── 1. Read-only shared SQL connectivity gate ───────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 1
+
+      # Fix: remove credsStore=osxkeychain from Docker config.
+      # launchd runner cannot access macOS keychain.
+      # Without this, docker build pull fails on every public base image.
+      - name: Patch Docker config (remove keychain store)
+        uses: ./.github/actions/stub-osxkeychain
+
+      # --- 0. Secret preflight ---------------------------------------------
+      - name: Preflight - required secrets present
+        run: |
+          set -euo pipefail
+          if [ -z "$SQLSERVER_CONFIG_JSON" ]; then
+            echo "::error::SQLSERVER_CONFIG_JSON is not set for the production environment"
+            exit 1
+          fi
+          # Validate JSON via stdin. The value is never printed.
+          if ! printf '%s' "$SQLSERVER_CONFIG_JSON" \
+              | python3 -c 'import json,sys; json.load(sys.stdin)'; then
+            echo "::error::SQLSERVER_CONFIG_JSON is not valid JSON"
+            exit 1
+          fi
+          echo "SQLSERVER_CONFIG_JSON present and valid."
+        env:
+          SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
+
+      # --- 1. Read-only shared SQL connectivity gate -------------------------
       - name: Check shared SQL connectivity (SELECT 1)
         env:
           SQLCMDPASSWORD: ${{ secrets.MSSQL_SA_PASSWORD }}
@@ -180,239 +212,184 @@ jobs:
           # Docker Desktop supplies sqlcmd on the Mac runner. Pass only the
           # environment variable NAME to Docker; its value never enters argv.
           # Suppress tool output so failures cannot echo connection credentials.
-          if ! docker --context desktop-linux run --rm \
+          if ! docker run --rm \
               --env SQLCMDPASSWORD \
               mcr.microsoft.com/mssql-tools:latest \
               /opt/mssql-tools/bin/sqlcmd \
-              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -d "$SQL_DB" \
+              -S "$SQL_SERVER,$SQL_PORT" -U "$SQL_USER" -d "$SQL_DATABASE" \
               -C -b -l 15 -Q "SELECT 1;" > /dev/null 2>&1; then
             echo "::error::Shared SQL connectivity check failed."
             exit 1
           fi
           echo "Shared SQL connectivity check passed."
 
-      # ── 2. Best-effort pre-deploy /healthz probe ─────────────────────────────
-      - name: Pre-deploy /healthz probe (best-effort)
-        continue-on-error: true
+      # --- 2. Stage deployment root ------------------------------------------
+      - name: Prepare app directory and install compose file
         run: |
-          set -uo pipefail
-          # P1-1 fix: ConnectTimeout on SSH.
-          if ssh -F /dev/null \
-                -i "$WORKDIR/id_ed25519" \
-                -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-                -o IdentitiesOnly=yes \
-                -o ConnectTimeout=10 \
-                -o BatchMode=yes \
-                "$USER@$IP" \
-                "curl -fsS --max-time 5 http://127.0.0.1:${ECS_HEALTH_PORT}${ECS_HEALTH_PATH} || true"; then
-            echo "Pre-deploy /healthz responded."
-          else
-            echo "::warning::Pre-deploy /healthz not available (best-effort, continuing)."
-          fi
+          set -euo pipefail
+          mkdir -p "$APP_DIR/secrets"
+          chmod 700 "$APP_DIR/secrets"
+          cp "$GITHUB_WORKSPACE/docker-compose.prod.yml" "$COMPOSE_FILE"
+          chmod 644 "$COMPOSE_FILE"
+          echo "Deployment root: $APP_DIR"
+          ls -ld "$APP_DIR" "$APP_DIR/secrets" "$COMPOSE_FILE"
 
-      # ── 3. Docker compose config validation ────────────────────────────────
+      # --- 3. Docker compose config validation --------------------------------
       - name: Validate docker compose configuration
         run: |
           set -euo pipefail
-          # P1-3 fix: run config --services before touching anything.
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              "$USER@$IP" \
-              "cd '$ECS_APP_DIR' && \
-               docker compose -p witop-production \
-                 -f '$ECS_COMPOSE_FILE' \
-                 --env-file '$ECS_ENV_FILE' \
-                 config --services"
+          # P1-3 fix: run config --services before touching the running stack.
+          docker compose -f "$COMPOSE_FILE" config --services
           echo "docker compose config valid."
 
-      # ── 4. GHCR login + docker pull on ECS ────────────────────────────────
-      - name: Login GHCR and pull target image
+      # --- 4. SQL config secret -> 0600 bind-mount source ---------------------
+      - name: Write SQL config secret file
         run: |
           set -euo pipefail
-          # P0-3 fix: pass all args as explicit positional parameters to the
-          # remote script. No variable interpolation happens in the local heredoc;
-          # printf %q formats each value for safe shell evaluation on the remote.
-          # The heredoc uses ENDREMOTE (not quoted) so local $VAR references
-          # ARE expanded here, giving us the actual values to pass.
-          REGISTRY_VAL="$REGISTRY"
-          GHCR_USER_VAL="$GHCR_USER"
-          TAG_VAL="$TAG"
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=20 \
-              "$USER@$IP" \
-              "SCRIPT=\$(mktemp) && \
-               printf '%s\n' \
-                 '#!/bin/bash' \
-                 'set -euo pipefail' \
-                 \"REG=\$(printf '%s' \"\$1\")\" \
-                 \"USR=\$(printf '%s' \"\$2\")\" \
-                 \"IMG_TAG=\$(printf '%s' \"\$3\")\" \
-                 ': \"\${REG:?registry required}\"' \
-                 ': \"\${USR:?username required}\"' \
-                 ': \"\${IMG_TAG:?tag required}\"' \
-                 'docker login \"\${REG}\" -u \"\${USR}\" --password-stdin' \
-                 'IMAGE=\"\${REG}/witop-decor/quote-system:\${IMG_TAG}\"' \
-                 'echo \"Pulling \$IMAGE\"' \
-                 'docker pull \"\$IMAGE\"' \
-                 'DIGEST=\$(docker inspect --format=\"{{.Id}}\" \"\$IMAGE\" 2>/dev/null)' \
-                 'echo \"DIGEST=\$DIGEST\"' \
-                 'if [ -z \"\$DIGEST\" ]; then echo \"::error::failed to pull \$IMAGE\"; exit 1; fi' \
-                 'docker logout \"\${REG}\"' \
-                 > \"\$SCRIPT\" && chmod +x \"\$SCRIPT\" && \
-               bash \"\$SCRIPT\" \
-                 \"\$(printf '%s' \"$REGISTRY_VAL\" | python3 -c 'import sys,shlex; sys.stdout.buffer.write(shlex.quote(sys.stdin.buffer.read().decode()))')\" \
-                 \"\$(printf '%s' \"$GHCR_USER_VAL\" | python3 -c 'import sys,shlex; sys.stdout.buffer.write(shlex.quote(sys.stdin.buffer.read().decode()))')\" \
-                 \"\$(printf '%s' \"$TAG_VAL\" | python3 -c 'import sys,shlex; sys.stdout.buffer.write(shlex.quote(sys.stdin.buffer.read().decode()))')\"" \
-              < <(printf '%s\n' "$GHCR_TOKEN")
-          echo "Image pull script completed."
+          printf '%s' "$SQLSERVER_CONFIG_JSON" > "$SQLSERVER_CONFIG_FILE"
+          chmod 600 "$SQLSERVER_CONFIG_FILE"
+          # Print the path and its mode only. The contents are never echoed.
+          echo "Wrote SQL config to $SQLSERVER_CONFIG_FILE"
+          stat -f 'mode=%Sp owner=%Su size=%z bytes' "$SQLSERVER_CONFIG_FILE"
+        env:
+          SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
 
-      # ── 5. Stop and remove old container ────────────────────────────────────
+      # --- 5. Build the release image locally ---------------------------------
+      # Skip docker/setup-buildx-action entirely: buildx invokes the osxkeychain
+      # helper for every base-image pull, which fails under launchd.
+      - name: Build Docker image
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg NODE_IMAGE=node:22.23.3-bookworm-slim \
+            --tag "$WITOP_APP_IMAGE" \
+            --file ./Dockerfile \
+            .
+          echo "Built $WITOP_APP_IMAGE"
+          docker images "$WITOP_APP_IMAGE" --format 'tag={{.Tag}} size={{.Size}}'
+
+      # --- 6. Free port 8765 --------------------------------------------------
+      - name: Stop local service holding port 8765
+        run: |
+          set -euo pipefail
+          # Idempotent: the service may already be unloaded.
+          launchctl bootout gui/$(id -u)/com.witop.reception-v4 || true
+          ELAPSED=0
+          while [ "$ELAPSED" -lt 15 ]; do
+            if ! lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+              echo "Port $APP_PORT free after ${ELAPSED}s."
+              break
+            fi
+            sleep 1
+            ELAPSED=$((ELAPSED+1))
+          done
+          if lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "::error::port $APP_PORT is still held by another process:"
+            lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN
+            exit 1
+          fi
+
+      # --- 7. Replace the old container ---------------------------------------
       - name: Stop and remove old container
         run: |
           set -euo pipefail
-          # P1-3 fix: pull succeeds before stop, so old container keeps serving
-          # if pull fails. stop/rm is after pull in the step order.
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              "$USER@$IP" \
-              "cd '$ECS_APP_DIR' && \
-               docker compose -p witop-production \
-                 -f '$ECS_COMPOSE_FILE' \
-                 --env-file '$ECS_ENV_FILE' \
-                 stop app && \
-               docker compose -p witop-production \
-                 -f '$ECS_COMPOSE_FILE' \
-                 --env-file '$ECS_ENV_FILE' \
-                 rm -f app"
-          echo "Old container stopped and removed."
+          # P1-3 fix: the build succeeds before this step, so the old container
+          # keeps serving if the build fails.
+          # Tolerate a first run where nothing is deployed yet.
+          docker compose -f "$COMPOSE_FILE" stop app || true
+          docker compose -f "$COMPOSE_FILE" rm -f app || true
+          echo "Old container stopped and removed (if any)."
 
-      # ── 6. Bring up new container with target tag ───────────────────────────
       - name: Bring up new container
         run: |
           set -euo pipefail
-          # P0-4 fix: IMAGE_TAG is a local shell variable defined in the
-          # environment block at job level (needs.preflight.outputs.workdir
-          # and needs.validate.outputs.image_tag). It is expanded by the
-          # local shell before being embedded in the SSH command.
-          IMAGE_TAG="$TAG"
-          IMAGE="ghcr.io/witop-decor/quote-system:${IMAGE_TAG}"
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              "$USER@$IP" \
-              "cd '$ECS_APP_DIR' && \
-               docker compose -p witop-production \
-                 -f '$ECS_COMPOSE_FILE' \
-                 --env-file '$ECS_ENV_FILE' \
-                 up -d --no-build --no-deps app && \
-               echo 'Container started with IMAGE_TAG=$IMAGE_TAG IMAGE=$IMAGE'"
-          echo "New container started."
+          docker compose -f "$COMPOSE_FILE" up -d --no-build --no-deps app
+          echo "Started $WITOP_APP_IMAGE on 127.0.0.1:$APP_PORT."
 
-      # ── 7. Wait for /healthz post-deploy gate ───────────────────────────────
-      - name: Wait for /healthz (post-deploy gate)
+      # --- 8. Post-deploy /healthz gate ---------------------------------------
+      - name: Wait for app container healthy and /healthz 200
         run: |
           set -euo pipefail
-          # P1-1 fix: ConnectTimeout on SSH.
-          for i in $(seq 1 30); do
-            code=$(ssh -F /dev/null \
-                  -i "$WORKDIR/id_ed25519" \
-                  -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-                  -o IdentitiesOnly=yes \
-                  -o BatchMode=yes \
-                  -o ConnectTimeout=10 \
-                  "$USER@$IP" \
-                  "curl -s -o /dev/null -w '%{http_code}' --max-time 8 \
-                   http://127.0.0.1:${ECS_HEALTH_PORT}${ECS_HEALTH_PATH} || echo 000")
-            if [ "$code" = "200" ]; then
-              echo "Local /healthz returned 200 after ${i} attempts."
-              exit 0
-            fi
-            sleep 5
+          CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q app)
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "::error::no running container found"
+            exit 1
+          fi
+          echo "Waiting for container healthy (HEALTHCHECK timeout is 35s)..."
+          ELAPSED=0
+          STATUS=""
+          while [ "$ELAPSED" -lt 240 ]; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' \
+              "$CONTAINER_ID" 2>/dev/null || echo none)
+            case "$STATUS" in
+              healthy)
+                echo "Container healthy after ${ELAPSED}s."
+                break
+                ;;
+              unhealthy)
+                echo "::error::container unhealthy after ${ELAPSED}s"
+                docker compose -f "$COMPOSE_FILE" logs --tail=200 app
+                exit 1
+                ;;
+            esac
+            sleep 3
+            ELAPSED=$((ELAPSED+3))
           done
-          echo "::error::Local /healthz did not return 200 within 150s."
-          exit 1
+          if [ "$STATUS" != "healthy" ]; then
+            echo "::error::container did not become healthy in 240s (last: $STATUS)"
+            docker compose -f "$COMPOSE_FILE" logs --tail=200 app
+            exit 1
+          fi
+          BODY=$(curl -fsS --max-time "$SMOKE_MAX_TIME" \
+            "http://127.0.0.1:$APP_PORT/healthz")
+          echo "GET /healthz -> $BODY"
 
-      # ── 8. Verify running container image ──────────────────────────────────
+      # --- 9. Verify running container image -----------------------------------
       - name: Verify deployed image digest
         run: |
           set -euo pipefail
-          # P0-5 fix:
-          #   - Compare container .Image (image ID used by the container) vs
-          #     target image .Id (image ID in the local registry after pull).
-          #   - Both must be non-empty; any inspect failure exits 1 immediately.
-          #   - Use container ID from compose ps (avoids needing container name).
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              "$USER@$IP" \
-              "CONTAINER_ID=\$(cd '$ECS_APP_DIR' && \
-               docker compose -p witop-production -f '$ECS_COMPOSE_FILE' ps -q app) && \
-               if [ -z \"\$CONTAINER_ID\" ]; then \
-                 echo '::error::no running container found'; exit 1; fi && \
-               TARGET_IMAGE='$REGISTRY/witop-decor/quote-system:$TAG' && \
-               EXPECTED_ID=\$(docker inspect --format='{{.Id}}' \"\$TARGET_IMAGE\" 2>/dev/null) && \
-               RUNNING_IMAGE=\$(docker inspect --format='{{.Image}}' \"\$CONTAINER_ID\" 2>/dev/null) && \
-               echo \"Expected image ID: \$EXPECTED_ID\" && \
-               echo \"Running container image ID: \$RUNNING_IMAGE\" && \
-               if [ -z \"\$EXPECTED_ID\" ] || [ -z \"\$RUNNING_IMAGE\" ]; then \
-                 echo '::error::image ID inspection failed (empty result)'; exit 1; fi && \
-               if [ \"\$EXPECTED_ID\" != \"\$RUNNING_IMAGE\" ]; then \
-                 echo \"::error::Image mismatch — expected \$EXPECTED_ID, running \$RUNNING_IMAGE\"; \
-                 exit 1; fi && \
-               echo 'Digest verification passed.'"
-          echo "Image digest verified."
+          # P0-5 fix: compare the running container's image ID against the tag
+          # this run built. Either inspect failing (empty) exits 1 immediately.
+          CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q app)
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "::error::no running container found"
+            exit 1
+          fi
+          EXPECTED_ID=$(docker inspect --format='{{.Id}}' "$WITOP_APP_IMAGE")
+          RUNNING_IMAGE=$(docker inspect --format='{{.Image}}' "$CONTAINER_ID")
+          echo "Expected image ID: $EXPECTED_ID"
+          echo "Running container image ID: $RUNNING_IMAGE"
+          if [ -z "$EXPECTED_ID" ] || [ -z "$RUNNING_IMAGE" ]; then
+            echo "::error::image ID inspection failed (empty result)"
+            exit 1
+          fi
+          if [ "$EXPECTED_ID" != "$RUNNING_IMAGE" ]; then
+            echo "::error::Image mismatch — expected $EXPECTED_ID, running $RUNNING_IMAGE"
+            exit 1
+          fi
+          echo "Digest verification passed."
 
   # ── Smoke test (post-deploy) ───────────────────────────────────────────────
 
   smoke:
-    name: Smoke (real routes, ECS loopback)
+    name: Smoke (real routes, local loopback)
     needs: [deploy, preflight]
     runs-on: [self-hosted, macos, ARM64, production]
-    # Static values needed by smoke steps. Secrets accessed at step level only.
-    env:
-      ECS_HEALTH_PORT: "8913"
-      ECS_HEALTH_PATH: /healthz
-      SMOKE_PATHS: "/healthz /api/receptions /"
     steps:
-      - name: Probe real routes via ECS loopback
-        env:
-          WORKDIR: ${{ needs.preflight.outputs.workdir }}
-          USER: ${{ secrets.ECS_USER }}
-          IP: ${{ secrets.ECS_IP }}
+      # Probes the container port directly. 8913 is host nginx and returns 401
+      # without Basic Auth, so it is not a CI target.
+      - name: Probe real routes on loopback
         run: |
           set -euo pipefail
           FAILED=0
-          # P1-1 fix: ConnectTimeout on SSH; curl has max-time.
-          for path in $SMOKE_PATHS; do
-            code=$(ssh -F /dev/null \
-                  -i "$WORKDIR/id_ed25519" \
-                  -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-                  -o IdentitiesOnly=yes \
-                  -o BatchMode=yes \
-                  -o ConnectTimeout=10 \
-                  "$USER@$IP" \
-                  "curl -fsS -o /dev/null -w '%{http_code}' --max-time 8 \
-                   http://127.0.0.1:${ECS_HEALTH_PORT}${path} || echo 000")
-            if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-              echo "::error::smoke $path -> $code"
+          read -r -a PATHS <<< "$SMOKE_PATHS"
+          for path in "${PATHS[@]}"; do
+            rc=0
+            code=$(curl -fsS -o /dev/null -w '%{http_code}' \
+              --max-time "$SMOKE_MAX_TIME" \
+              "http://127.0.0.1:$APP_PORT$path") || rc=$?
+            if [ "$rc" -ne 0 ] || [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+              echo "::error::smoke $path -> ${code:-000} (curl rc=$rc)"
               FAILED=$((FAILED+1))
             else
               echo "smoke $path -> $code"
@@ -424,44 +401,16 @@ jobs:
           fi
           echo "All smoke probes passed."
 
-  # ── Finalize (cleanup + DingTalk notification) ──────────────────────────────
+  # ── Finalize (DingTalk notification) ────────────────────────────────────────
 
   finalize:
-    name: Finalize (cleanup + DingTalk notify)
+    name: Finalize (DingTalk notify)
     needs: [validate, preflight, deploy, smoke]
     if: always()
     runs-on: [self-hosted, macos, ARM64, production]
-    # Static values needed by finalize steps. Secrets accessed at step level only.
-    env:
-      REGISTRY: ghcr.io
     steps:
-      - name: Cleanup per-run workdir
-        if: always()
-        run: |
-          WORKDIR="${{ needs.preflight.outputs.workdir }}"
-          if [ -n "$WORKDIR" ] && [ -d "$WORKDIR" ]; then
-            rm -rf "$WORKDIR"
-            echo "Removed workdir: $WORKDIR"
-          fi
-
-      - name: GHCR logout on ECS
-        if: always()
-        env:
-          WORKDIR: ${{ needs.preflight.outputs.workdir }}
-          USER: ${{ secrets.ECS_USER }}
-          IP: ${{ secrets.ECS_IP }}
-          REGISTRY: ${{ env.REGISTRY }}
-        run: |
-          # P1-2 fix: logout runs even if previous steps in this job failed.
-          ssh -F /dev/null \
-              -i "$WORKDIR/id_ed25519" \
-              -o UserKnownHostsFile="$WORKDIR/known_hosts" \
-              -o IdentitiesOnly=yes \
-              -o BatchMode=yes \
-              -o ConnectTimeout=10 \
-              "$USER@$IP" docker logout "$REGISTRY" 2>/dev/null || true
-          echo "GHCR logout attempted."
-
+      # The deployed container is left running on purpose; there is nothing to
+      # tear down, no registry session to close, and no per-run key material.
       - name: Notify DingTalk
         env:
           DEPLOY_RESULT: ${{ needs.deploy.result }}

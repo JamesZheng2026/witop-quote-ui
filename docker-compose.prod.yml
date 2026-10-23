@@ -1,0 +1,44 @@
+# Stage 1 production compose — Mac Studio runner, local build, loopback only.
+# Deployed by .github/workflows/production-deploy.yml (v0.8).
+#
+# There is deliberately NO nginx service here. The host nginx at
+# /opt/homebrew/etc/nginx/servers/witop-stage1.conf already reverse-proxies
+# 127.0.0.1:8765 -> this container with Basic Auth on listen 8913. Adding a
+# second nginx would give two competing front doors.
+#
+# 8765 is published to loopback only; 8913 is the externally reachable port.
+#
+# Required environment (supplied by the workflow, never committed):
+#   WITOP_APP_IMAGE        local immutable tag built by the workflow, e.g. witop-production:2026.10.19-r3
+#   SQLSERVER_CONFIG       fixed in-container path, /run/secrets/sqlserver_config.json
+#   SQLSERVER_CONFIG_FILE  absolute host path to that JSON (mode 0600)
+
+name: witop-production
+
+services:
+  app:
+    # Built by `docker build` in the deploy job; compose never builds.
+    image: ${WITOP_APP_IMAGE:?Set WITOP_APP_IMAGE to an immutable local tag}
+    environment:
+      # SQLSERVER_CONFIG is a FILE PATH, not inline JSON or credentials.
+      SQLSERVER_CONFIG: ${SQLSERVER_CONFIG:?Set SQLSERVER_CONFIG to /run/secrets/sqlserver_config.json}
+    volumes:
+      - type: bind
+        source: ${SQLSERVER_CONFIG_FILE:?Set the host SQL config file path}
+        target: /run/secrets/sqlserver_config.json
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      # Published (not exposed) so the host nginx can reach it; loopback only.
+      - "127.0.0.1:8765:8765"
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
