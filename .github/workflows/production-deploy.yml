@@ -273,7 +273,7 @@ jobs:
         run: |
           set -euo pipefail
           # Idempotent: the service may already be unloaded.
-          launchctl bootout gui/$(id -u)/com.witop.reception-v4 || true
+          launchctl bootout "gui/$(id -u)/com.witop.reception-v4" || true
           ELAPSED=0
           while [ "$ELAPSED" -lt 15 ]; do
             if ! lsof -nP -iTCP:"$APP_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
