@@ -518,10 +518,15 @@ jobs:
 
   finalize:
     name: Finalize (DingTalk notify)
+    environment:
+      name: production
+      deployment: false
     needs: [validate, preflight, deploy, smoke]
     if: always()
     runs-on: [self-hosted, macos, ARM64, production]
     steps:
+      # Use production secrets without creating another deployment record.
+      # Environment protection rules still apply to this notification job.
       # The deployed container is left running on purpose; there is nothing to
       # tear down, no remote image-store session, and no per-run key material.
       - name: Notify DingTalk
