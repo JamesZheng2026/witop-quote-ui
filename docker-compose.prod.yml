@@ -12,6 +12,17 @@
 #   WITOP_APP_IMAGE        local immutable tag built by the workflow, e.g. witop-production:2026.10.19-r3
 #   SQLSERVER_CONFIG       fixed in-container path, /run/secrets/sqlserver_config.json
 #   SQLSERVER_CONFIG_FILE  absolute host path to that JSON (mode 0600)
+#
+# All three are required (":?" interpolation), so the stack fails closed instead
+# of starting with a missing image tag or an unmounted secret. They are paths
+# and tags only — no secret value ever appears in this file or in the
+# `docker compose` command line.
+#
+# Working directory: this file contains no relative paths (no ./build context,
+# no ./nginx.conf bind, no env_file). `docker compose -f <abs path> config`
+# therefore resolves identically from any cwd. The workflow always passes the
+# absolute path -f /Users/james/witop-prod/docker-compose.prod.yml and copies
+# this file there before the first `docker compose` call.
 
 name: witop-production
 
@@ -28,6 +39,8 @@ services:
         target: /run/secrets/sqlserver_config.json
         read_only: true
         bind:
+          # Fail closed: never let Docker create an empty directory in place
+          # of the missing secret file.
           create_host_path: false
     ports:
       # Published (not exposed) so the host nginx can reach it; loopback only.
