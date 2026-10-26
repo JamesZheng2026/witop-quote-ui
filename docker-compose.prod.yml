@@ -12,8 +12,12 @@
 #   WITOP_APP_IMAGE        local immutable tag built by the workflow, e.g. witop-production:2026.10.19-r3
 #   SQLSERVER_CONFIG       fixed in-container path, /run/secrets/sqlserver_config.json
 #   SQLSERVER_CONFIG_FILE  absolute host path to that JSON (mode 0600)
+#   ANTHROPIC_API_KEY_FILE fixed in-container path to the Claude API key
+#   ANTHROPIC_API_KEY_SOURCE absolute host path to the Claude API key file (mode 0600)
+#   WITOP_AI_ACCESS_TOKEN_FILE fixed in-container path to the separate AI access token
+#   WITOP_AI_ACCESS_TOKEN_SOURCE absolute host path to the AI access-token file (mode 0600)
 #
-# All three are required (":?" interpolation), so the stack fails closed instead
+# Every required value uses ":?" interpolation, so the stack fails closed instead
 # of starting with a missing image tag or an unmounted secret. They are paths
 # and tags only — no secret value ever appears in this file or in the
 # `docker compose` command line.
@@ -31,8 +35,10 @@ services:
     # Built by `docker build` in the deploy job; compose never builds.
     image: ${WITOP_APP_IMAGE:?Set WITOP_APP_IMAGE to an immutable local tag}
     environment:
-      # SQLSERVER_CONFIG is a FILE PATH, not inline JSON or credentials.
+      # Values are FILE PATHS, not inline credentials.
       SQLSERVER_CONFIG: ${SQLSERVER_CONFIG:?Set SQLSERVER_CONFIG to /run/secrets/sqlserver_config.json}
+      ANTHROPIC_API_KEY_FILE: ${ANTHROPIC_API_KEY_FILE:?Set ANTHROPIC_API_KEY_FILE to /run/secrets/anthropic_api_key}
+      WITOP_AI_ACCESS_TOKEN_FILE: ${WITOP_AI_ACCESS_TOKEN_FILE:?Set WITOP_AI_ACCESS_TOKEN_FILE to /run/secrets/ai_access_token}
     volumes:
       - type: bind
         source: ${SQLSERVER_CONFIG_FILE:?Set the host SQL config file path}
@@ -41,6 +47,18 @@ services:
         bind:
           # Fail closed: never let Docker create an empty directory in place
           # of the missing secret file.
+          create_host_path: false
+      - type: bind
+        source: ${ANTHROPIC_API_KEY_SOURCE:?Set the host Claude API key file path}
+        target: /run/secrets/anthropic_api_key
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WITOP_AI_ACCESS_TOKEN_SOURCE:?Set the host AI access-token file path}
+        target: /run/secrets/ai_access_token
+        read_only: true
+        bind:
           create_host_path: false
     ports:
       # Published (not exposed) so the host nginx can reach it; loopback only.

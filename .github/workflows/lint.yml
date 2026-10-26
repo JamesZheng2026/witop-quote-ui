@@ -29,9 +29,8 @@ jobs:
           # Pin 22.x to match the local dev environment and avoid jsdom
           # 30.1.2 + Node 20 webidl compat crash.
           node-version: '22'
-          # No `cache:` here — the repo has no root package.json/lock, and
-          # jsdom is installed under reports/ via `npm install --prefix`,
-          # which `actions/setup-node` would not pick up anyway.
+          # Root runtime dependencies use package-lock.json; report fixtures are
+          # installed separately under reports/.
 
       - name: Shell script syntax (bash -n)
         run: |
@@ -78,10 +77,12 @@ jobs:
             git diff --check HEAD~1...HEAD
           fi
 
+      - name: Install production runtime dependencies
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
       - name: Install jsdom for reports/
         # AGENTS.md mandates jsdom 30.1.2 installable via `npm install --prefix reports`.
-        # This is the only npm install in the whole workflow; everything else
-        # is zero-dependency. Cached across runs keyed on reports/package.json.
+        # UI regressions keep their jsdom dependency isolated under reports/.
         run: |
           set -euo pipefail
           cache_key="npm-reports-$(sha256sum reports/package.json | cut -d' ' -f1)"
@@ -102,3 +103,8 @@ jobs:
         # This e2e takes <30s on the existing test suite and acts as the
         # primary regression guard for V3-05's channel-preserve fix. Keep it
         # in lint.yml so every PR exercises the bug path before merge.
+
+      - name: Verify live reception UI and SQL contract
+        run: npm --prefix reports run test:live
+        # Keep the production-default v4 dashboard and its read-only SQL
+        # mapping on the required path for every PR, not only local handoff.

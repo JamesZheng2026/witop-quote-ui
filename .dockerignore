@@ -1,11 +1,14 @@
 # Deny by default, including ignored/untracked secrets and Git worktree metadata.
 **
 !Dockerfile
+!package.json
+!package-lock.json
 !index.html
 !scripts/
 scripts/**
 !scripts/server.js
 !scripts/sqlserver-bridge.js
+!scripts/assistant.js
 !scripts/state.js
 !scripts/reception-bridge.js
 !scripts/okki-adapter.js

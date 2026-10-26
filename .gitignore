@@ -1,10 +1,10 @@
-# Local test dependencies — keep jsdom out of source control.
-# Provision with `npm install --prefix reports jsdom@30.1.2` or copy
-# `reports/node_modules` from a known-good install. See scripts/AGENTS.md.
+# Local runtime and test dependencies.
+/node_modules/
 reports/node_modules/
 
 # Hermes 草稿与验证脚本
 /worktrees/
+/.worktrees/
 /compare.html.md
 /V3-01b_*.md
 /scripts/run-visual.sh

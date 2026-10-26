@@ -2,6 +2,10 @@
 ARG NODE_IMAGE=node:22.23.3-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
 ARG PYTHON_IMAGE=python:3.11-slim-bookworm
 FROM ${NODE_IMAGE} AS node-runtime
+WORKDIR /nodeapp
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts \
+    && npm cache clean --force
 
 FROM ${PYTHON_IMAGE} AS python-wheels
 RUN python -m pip wheel --no-cache-dir --only-binary=:all: --wheel-dir=/wheels pymssql==2.3.13
@@ -19,9 +23,10 @@ RUN python -m pip install --no-cache-dir --no-index --find-links=/wheels pymssql
     && node --version \
     && python -c "import sys, pymssql; assert sys.version_info[:2] == (3, 11); print(pymssql.__version__)"
 WORKDIR /app
+COPY --from=node-runtime --chown=10001:10001 /nodeapp/node_modules ./node_modules
 # Explicit runtime allowlist: never COPY the checkout, reports, or credentials.
 COPY --chown=10001:10001 index.html ./
-COPY --chown=10001:10001 scripts/server.js scripts/sqlserver-bridge.js scripts/state.js \
+COPY --chown=10001:10001 scripts/server.js scripts/sqlserver-bridge.js scripts/assistant.js scripts/state.js \
     scripts/reception-bridge.js scripts/okki-adapter.js scripts/variants.js scripts/build-info.json ./scripts/
 ENV NODE_ENV=production PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 SQLSERVER_PYTHON=/usr/local/bin/python3
 USER 10001:10001
