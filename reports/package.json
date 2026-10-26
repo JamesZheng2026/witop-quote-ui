@@ -3,7 +3,11 @@
   "private": true,
   "scripts": {
     "test": "node test-channel-preserve.cjs",
-    "test:history": "node test-channel-preserve.cjs --two-phase"
+    "test:history": "node test-channel-preserve.cjs --two-phase",
+    "test:v4": "node test-v4.cjs",
+    "test:v4:sql": "node test-v4-sql.cjs",
+    "test:assistant": "node test-assistant.cjs",
+    "test:live": "npm run test:v4 && npm run test:v4:sql && npm run test:assistant"
   },
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26.0.0"

@@ -7,8 +7,10 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      # SQLSERVER_CONFIG is a FILE PATH, not inline JSON or credentials.
+      # Values are FILE PATHS, not inline credentials.
       SQLSERVER_CONFIG: ${SQLSERVER_CONFIG:?Set SQLSERVER_CONFIG to /run/secrets/sqlserver_config.json}
+      ANTHROPIC_API_KEY_FILE: ${ANTHROPIC_API_KEY_FILE:?Set ANTHROPIC_API_KEY_FILE to /run/secrets/anthropic_api_key}
+      WITOP_AI_ACCESS_TOKEN_FILE: ${WITOP_AI_ACCESS_TOKEN_FILE:?Set WITOP_AI_ACCESS_TOKEN_FILE to /run/secrets/ai_access_token}
     volumes:
       - type: bind
         source: ${SQLSERVER_CONFIG_FILE:?Set the external host SQL config file path}
@@ -16,6 +18,16 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      - type: bind
+        source: ${ANTHROPIC_API_KEY_SOURCE:?Set the external host Claude API key file path}
+        target: /run/secrets/anthropic_api_key
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${WITOP_AI_ACCESS_TOKEN_SOURCE:?Set the external host AI access-token file path}
+        target: /run/secrets/ai_access_token
+        read_only: true
+        bind: {create_host_path: false}
     expose:
       - "8765"
     restart: unless-stopped

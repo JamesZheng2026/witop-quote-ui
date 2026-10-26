@@ -171,6 +171,10 @@ jobs:
       # Fixed in-container path, matching docker-compose.prod.yml.
       SQLSERVER_CONFIG: /run/secrets/sqlserver_config.json
       SQLSERVER_CONFIG_FILE: /Users/james/witop-prod/secrets/sqlserver_config.json
+      ANTHROPIC_API_KEY_FILE: /run/secrets/anthropic_api_key
+      ANTHROPIC_API_KEY_SOURCE: /Users/james/witop-prod/secrets/anthropic_api_key
+      WITOP_AI_ACCESS_TOKEN_FILE: /run/secrets/ai_access_token
+      WITOP_AI_ACCESS_TOKEN_SOURCE: /Users/james/witop-prod/secrets/ai_access_token
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -198,9 +202,19 @@ jobs:
             echo "::error::SQLSERVER_CONFIG_JSON is not valid JSON"
             exit 1
           fi
-          echo "SQLSERVER_CONFIG_JSON present and valid."
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY is not set for the production environment"
+            exit 1
+          fi
+          if [ "${#WITOP_AI_ACCESS_TOKEN}" -lt 16 ] || [ "${#WITOP_AI_ACCESS_TOKEN}" -gt 256 ]; then
+            echo "::error::WITOP_AI_ACCESS_TOKEN must contain 16-256 characters"
+            exit 1
+          fi
+          echo "Required production secrets are present and SQLSERVER_CONFIG_JSON is valid."
         env:
           SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WITOP_AI_ACCESS_TOKEN: ${{ secrets.WITOP_AI_ACCESS_TOKEN }}
 
       # --- 1. Read-only shared SQL connectivity gate -------------------------
       - name: Check shared SQL connectivity (SELECT 1)
@@ -254,6 +268,21 @@ jobs:
           stat -f 'mode=%Sp owner=%Su size=%z bytes' "$SQLSERVER_CONFIG_FILE"
         env:
           SQLSERVER_CONFIG_JSON: ${{ secrets.SQLSERVER_CONFIG_JSON }}
+
+      - name: Write Claude and AI access secret files
+        run: |
+          set +x
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANTHROPIC_API_KEY" > "$ANTHROPIC_API_KEY_SOURCE"
+          printf '%s' "$WITOP_AI_ACCESS_TOKEN" > "$WITOP_AI_ACCESS_TOKEN_SOURCE"
+          chmod 600 "$ANTHROPIC_API_KEY_SOURCE" "$WITOP_AI_ACCESS_TOKEN_SOURCE"
+          echo "Wrote protected Claude and AI access files (contents suppressed)."
+          stat -f 'mode=%Sp owner=%Su size=%z bytes path=%N' \
+            "$ANTHROPIC_API_KEY_SOURCE" "$WITOP_AI_ACCESS_TOKEN_SOURCE"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WITOP_AI_ACCESS_TOKEN: ${{ secrets.WITOP_AI_ACCESS_TOKEN }}
 
       # --- 5. Build the release image locally ---------------------------------
       # Skip docker/setup-buildx-action entirely: buildx invokes the osxkeychain
@@ -508,6 +537,16 @@ jobs:
               echo "smoke $path -> $code"
             fi
           done
+          assistant_code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time 5 -X POST -H 'Content-Type: application/json' \
+            --data '{"messages":[{"role":"user","content":"smoke"}]}' \
+            "http://127.0.0.1:$APP_PORT/api/assistant/chat")
+          if [ "$assistant_code" != "401" ]; then
+            echo "::error::assistant access gate -> $assistant_code (expected 401)"
+            FAILED=$((FAILED+1))
+          else
+            echo "assistant access gate -> 401 (no billable API call)"
+          fi
           if [ "$FAILED" -gt 0 ]; then
             echo "::error::$FAILED smoke probe(s) failed."
             exit 1

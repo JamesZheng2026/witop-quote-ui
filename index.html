@@ -126,6 +126,9 @@
     .live-list-head h2 { font-size: 18px; font-weight: 700; margin: 0; }
     .live-tools { display: flex; flex-wrap: wrap; gap: 8px; }
     .live-tools input, .live-tools select { border: 1px solid #dbe2ee; border-radius: 8px; padding: 7px 10px; background: #fff; color: #42464e; max-width: 100%; }
+    .live-results-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -4px 0 14px; }
+    #live-results { color: #626e83; font-size: 12px; margin: 0; }
+    #live-reset { border: 0; padding: 4px 0; background: transparent; color: #2563eb; cursor: pointer; font: inherit; }
     #live-source { color: #626e83; font-size: 12px; margin: 0 0 14px; }
     #live-source[data-error="true"] { color: #b42318; }
     #live-cards { display: flex; flex-direction: column; gap: 12px; }
@@ -142,13 +145,48 @@
     .live-preview p { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
     .live-preview button { flex-shrink: 0; background: #356eec; color: white; border: 0; border-radius: 14px; padding: 5px 12px; cursor: pointer; }
     .live-empty { padding: 40px 20px; text-align: center; background: #f8fafe; border-radius: 16px; color: #6d7178; }
-    #live-detail { width: min(620px,90vw); max-height: 80vh; overflow: auto; padding: 28px; border: 1px solid #dbe2ee; border-radius: 16px; color: #171a20; background: white; }
+    #live-detail { width: min(760px,92vw); max-height: 84vh; overflow: auto; padding: 28px; border: 1px solid #dbe2ee; border-radius: 16px; color: #171a20; background: white; }
     #live-detail::backdrop { background: #0f172a66; }
-    #live-detail-message { white-space: pre-wrap; overflow-wrap: anywhere; padding: 16px; background: #f5f7fb; border-radius: 8px; }
+    .live-history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 18px; }
+    .live-history-head h3 { margin: 0; font-size: 15px; }
+    #live-detail-message { display: grid; gap: 10px; min-height: 96px; max-height: 48vh; overflow: auto; padding: 14px; background: #f5f7fb; border-radius: 10px; }
+    .live-message { max-width: 88%; padding: 10px 12px; border: 1px solid #dce3ef; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+    .live-message[data-sender-type="-1"] { border-style: dashed; }
+    .live-message-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; color: #64748b; font-size: 11px; }
+    .live-message-text { margin: 0; white-space: pre-wrap; }
+    .live-redacted { color: #9a5b00; font-weight: 600; }
+    #live-detail-more { margin: 10px 0 0; }
+    #view-ai-assistant { min-height: 100vh; padding: 28px; color: #20242b; }
+    .assistant-shell { width: min(920px,100%); margin: 0 auto; display: grid; gap: 16px; }
+    .assistant-header, .assistant-panel, .assistant-boundary { background: #fff; border: 1px solid #dce3ee; border-radius: 16px; box-shadow: 0 8px 24px #2f4d7a12; }
+    .assistant-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; }
+    .assistant-header h1 { margin: 0; font-size: 22px; }
+    .assistant-header p { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+    .assistant-model { padding: 5px 10px; border-radius: 999px; background: #eef4ff; color: #255abf; font-size: 12px; font-weight: 700; }
+    .assistant-boundary { padding: 14px 18px; border-left: 4px solid #f59e0b; font-size: 13px; color: #614315; }
+    .assistant-panel { overflow: hidden; }
+    #assistant-thread { min-height: 360px; max-height: 56vh; overflow: auto; display: grid; align-content: start; gap: 12px; padding: 20px; background: #f8fafe; }
+    .assistant-empty { margin: auto; max-width: 560px; text-align: center; color: #64748b; line-height: 1.7; }
+    .assistant-message { max-width: 86%; padding: 12px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
+    .assistant-message[data-role="user"] { margin-left: auto; color: #fff; background: #356eec; border-bottom-right-radius: 4px; }
+    .assistant-message[data-role="assistant"] { margin-right: auto; color: #20242b; background: #fff; border: 1px solid #dce3ee; border-bottom-left-radius: 4px; }
+    .assistant-message[data-error="true"] { border-color: #f0a4a4; background: #fff1f1; color: #a12626; }
+    .assistant-form { display: grid; gap: 10px; padding: 16px 20px 20px; border-top: 1px solid #e6ebf3; }
+    .assistant-access { display: flex; align-items: center; gap: 10px; }
+    .assistant-access label { min-width: 92px; font-size: 12px; font-weight: 700; color: #526071; }
+    .assistant-access input, #assistant-input { width: 100%; border: 1px solid #cfd8e6; border-radius: 10px; padding: 10px 12px; background: #fff; color: #20242b; }
+    #assistant-input { min-height: 96px; resize: vertical; }
+    .assistant-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .assistant-actions div { display: flex; gap: 8px; }
+    .assistant-actions button { border: 0; border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+    #assistant-send { color: #fff; background: #356eec; font-weight: 700; }
+    #assistant-clear { color: #42526a; background: #edf1f7; }
+    .assistant-actions button:disabled { opacity: .55; cursor: wait; }
+    #assistant-status { min-height: 20px; color: #64748b; font-size: 12px; }
     @media(max-width:760px) {
       #view-reception-live { padding: 18px 14px; }
-      .live-step { padding: 12px 8px 12px 26px; font-size: 12px; }
-      .live-step:first-child { padding-left: 12px; }
+      .live-stepper { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+      .live-step, .live-step:first-child, .live-step:last-child { min-height: 92px; padding: 12px; border-radius: 12px; clip-path: none; font-size: 12px; }
       .live-step strong { font-size: 24px; }
       .live-step small { font-size: 10px; }
       .live-card-head { grid-template-columns: 40px minmax(0,1fr); gap: 10px; }
@@ -157,6 +195,20 @@
       .live-wa { display: inline-block; margin: 0 6px 0 0; text-align: center; }
       .live-owner { grid-column: 2; text-align: left; }
       .live-owner strong { display: inline-block; }
+    }
+    @media(max-width:480px) {
+      .live-list-head { align-items: stretch; }
+      .live-tools, .live-tools input, .live-tools select { width: 100%; }
+      .live-tools input, .live-tools select { flex: 1 1 100%; }
+      .live-results-bar { align-items: flex-start; }
+      .live-preview { align-items: flex-start; }
+      .live-preview p { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+      #view-ai-assistant { padding: 14px; }
+      .assistant-header { align-items: flex-start; flex-direction: column; }
+      .assistant-message { max-width: 96%; }
+      .assistant-access, .assistant-actions { align-items: stretch; flex-direction: column; }
+      .assistant-access label { min-width: 0; }
+      .assistant-actions div, .assistant-actions button { width: 100%; }
     }
   </style>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -169,6 +221,7 @@
   <aside class="v4-sidebar no-print" aria-label="主导航">
     <nav>
       <button class="sidebar-item active" title="接待工作台" aria-label="接待工作台" onclick="showView('reception-live')" id="nav-reception-live">◈</button>
+      <button class="sidebar-item" title="Claude 优化助手" aria-label="Claude 优化助手" onclick="showView('ai-assistant')" id="nav-ai-assistant">✦</button>
       <button class="sidebar-item" title="询盘列表（演示）" aria-label="询盘列表（演示）" onclick="showView('inquiries')" id="nav-inquiries">▤</button>
       <button class="sidebar-item" title="AI 报价（演示）" aria-label="AI 报价（演示）" onclick="showView('quote-panel')" id="nav-quote-panel">▦</button>
       <button class="sidebar-item" title="质检报告（演示）" aria-label="质检报告（演示）" onclick="showView('quality-report')" id="nav-quality-report">✓</button>
@@ -185,10 +238,10 @@
     <section id="view-reception-live" class="view" aria-label="接待工作台 v4">
       <header class="live-header"><span class="live-logo" aria-hidden="true">销</span><h1>接待工作台</h1><button type="button" id="live-refresh">刷新数据</button></header>
       <div class="live-stepper" aria-label="接待流程">
-        <button type="button" class="live-step" id="live-stage-config" data-live-stage="config" aria-pressed="true">输入配置<strong id="live-config-count">—</strong><small>数据源连接</small></button>
-        <button type="button" class="live-step" data-live-stage="assignment" aria-pressed="false">接待分配<strong id="live-assigned-count">—</strong><small>已有关联归属人</small></button>
-        <button type="button" class="live-step" data-live-stage="complete" aria-pressed="false">服务完成<strong>—</strong><small>未提供完成状态</small></button>
-        <button type="button" class="live-step" data-live-stage="records" aria-pressed="false">信息记录<strong id="live-record-count">—</strong><small>已载入会话</small></button>
+        <button type="button" class="live-step" id="live-stage-config" data-live-stage="config" aria-pressed="true" aria-controls="live-cards">输入配置<strong id="live-config-count">—</strong><small>数据源连接</small></button>
+        <button type="button" class="live-step" data-live-stage="assignment" aria-pressed="false" aria-controls="live-cards">接待分配<strong id="live-assigned-count">—</strong><small>已有关联归属人</small></button>
+        <button type="button" class="live-step" data-live-stage="complete" aria-pressed="false" aria-controls="live-cards">服务完成<strong>—</strong><small>未提供完成状态</small></button>
+        <button type="button" class="live-step" data-live-stage="records" aria-pressed="false" aria-controls="live-cards">信息记录<strong id="live-record-count">—</strong><small>已载入会话</small></button>
       </div>
       <p id="live-stage-note" class="live-stage-note" aria-live="polite">从已有 WhatsApp 消息读取接待。此入口只读，新增接待需先在消息源产生会话。</p>
       <div class="live-list-head"><h2>接待列表</h2><div class="live-tools">
@@ -197,8 +250,43 @@
         <select id="live-sort" aria-label="最近沟通时间排序"><option value="desc">最近沟通优先</option><option value="asc">最早沟通优先</option></select>
       </div></div>
       <p id="live-source" role="status" aria-live="polite">正在连接数据源…</p>
+      <div class="live-results-bar"><p id="live-results" role="status" aria-live="polite" aria-atomic="true">正在载入接待记录…</p><button type="button" id="live-reset" hidden>清除筛选</button></div>
       <section id="live-cards" aria-label="接待卡片" aria-busy="true"></section>
-      <dialog id="live-detail" aria-labelledby="live-detail-title"><h2 id="live-detail-title">接待详情</h2><p id="live-detail-meta"></p><p>最近一条消息</p><div id="live-detail-message"></div><p class="live-meta">消息源未提供服务完成状态与 AI 概要。</p><button type="button" id="live-detail-close">关闭</button></dialog>
+      <dialog id="live-detail" aria-labelledby="live-detail-title" aria-describedby="live-detail-meta live-detail-note">
+        <h2 id="live-detail-title">接待详情</h2>
+        <p id="live-detail-meta"></p>
+        <div class="live-history-head"><h3>聊天记录</h3><span class="live-meta" id="live-detail-history-status" role="status" aria-live="polite"></span></div>
+        <div id="live-detail-message" role="log" aria-live="polite" aria-busy="false"></div>
+        <button type="button" id="live-detail-more" hidden>加载更早消息</button>
+        <p class="live-meta" id="live-detail-note">聊天记录为只读分页视图；邮箱、电话及疑似密钥会在服务端脱敏，不会把数据库凭证返回浏览器。</p>
+        <button type="button" id="live-detail-close">关闭</button>
+      </dialog>
+    </section>
+
+    <section id="view-ai-assistant" class="view hidden" aria-label="Claude 优化助手">
+      <div class="assistant-shell">
+        <header class="assistant-header">
+          <div><h1>Claude 优化助手</h1><p>描述你想修改的页面、流程或交互，实时生成可审核的优化方案。</p></div>
+          <span class="assistant-model" id="assistant-model">Claude Opus 5.5</span>
+        </header>
+        <div class="assistant-boundary" role="note">
+          安全边界：AI 只接收你在此输入的文字，不读取客户聊天或 SQL 数据；疑似密钥、邮箱和电话会先在服务端脱敏。当前版本不会从公网直接写生产文件；代码变更必须经过 Git 分支、自动测试、PR 审核和 production 审批。
+        </div>
+        <div class="assistant-panel">
+          <div id="assistant-thread" role="log" aria-live="polite" aria-busy="false">
+            <p class="assistant-empty" id="assistant-empty">例如：“把接待卡片改得更紧凑，并在手机上优先显示归属人。”<br>Claude 会先说明方案、影响范围和验收标准。</p>
+          </div>
+          <form id="assistant-form" class="assistant-form">
+            <div class="assistant-access"><label for="assistant-access">AI 独立访问口令</label><input id="assistant-access" type="password" autocomplete="off" minlength="16" maxlength="256" placeholder="仅保存在当前页面内存，不写入浏览器存储"></div>
+            <label for="assistant-input" class="sr-only">优化需求</label>
+            <textarea id="assistant-input" maxlength="4000" required placeholder="请输入想修改或优化的内容…"></textarea>
+            <div class="assistant-actions">
+              <span id="assistant-status" role="status" aria-live="polite">等待输入需求</span>
+              <div><button type="button" id="assistant-clear">清空对话</button><button type="submit" id="assistant-send">发送需求</button></div>
+            </div>
+          </form>
+        </div>
+      </div>
     </section>
 
     <!-- DASHBOARD VIEW -->
@@ -2186,18 +2274,143 @@ init();
     }
     return String(value);
   }
-  function openDetail(record) {
+  let detailTrigger = null;
+  let detailController = null;
+  let detailRecord = null;
+  let detailCursor = null;
+  let detailLoading = false;
+  const HISTORY_PAGE_SIZE = 50;
+  function restoreDetailFocus() {
+    const trigger = detailTrigger;
+    detailTrigger = null;
+    if (trigger && trigger.isConnected && typeof trigger.focus === 'function') trigger.focus();
+  }
+  function closeDetail() {
+    const dialog = byId('live-detail');
+    if (!dialog.hasAttribute('open')) return;
+    if (detailController) detailController.abort();
+    detailController = null;
+    detailRecord = null;
+    detailLoading = false;
+    if (typeof dialog.close === 'function') dialog.close();
+    else {
+      dialog.removeAttribute('open');
+      dialog.removeAttribute('role');
+      dialog.removeAttribute('aria-modal');
+      dialog.removeAttribute('tabindex');
+      restoreDetailFocus();
+    }
+  }
+  function renderHistoryMessage(message) {
+    const item = element('article', 'live-message');
+    item.dataset.messageId = message.id;
+    item.dataset.senderType = String(message.senderType);
+    const meta = element('div', 'live-message-meta');
+    meta.append(element('span', '', message.participantLabel || '已脱敏参与者'));
+    meta.append(element('span', '', '发送方类型 ' + message.senderType));
+    meta.append(element('time', '', timestamp(message.sentAt)));
+    if (message.redacted) meta.append(element('span', 'live-redacted', '含脱敏内容'));
+    item.append(meta, element('p', 'live-message-text', message.text || '（空消息）'));
+    return item;
+  }
+  async function loadDetailMessages(record, { reset = false } = {}) {
+    if (detailLoading && !reset) return;
+    if (reset) {
+      if (detailController) detailController.abort();
+      detailController = new AbortController();
+      detailRecord = record;
+      detailCursor = null;
+      byId('live-detail-message').replaceChildren();
+      byId('live-detail-more').hidden = true;
+    }
+    const controller = detailController;
+    const requestedCursor = detailCursor;
+    const loadingMore = typeof requestedCursor === 'string';
+    const list = byId('live-detail-message');
+    const status = byId('live-detail-history-status');
+    detailLoading = true;
+    list.setAttribute('aria-busy', 'true');
+    status.textContent = loadingMore ? '正在载入更早消息…' : '正在载入聊天记录…';
+    try {
+      const historyUrl = '/api/receptions/' + encodeURIComponent(record.id) + '/messages?limit=' + HISTORY_PAGE_SIZE +
+        (requestedCursor ? '&cursor=' + encodeURIComponent(requestedCursor) : '');
+      const response = await fetch(historyUrl,
+        { cache: 'no-store', signal: controller.signal, headers: { Accept: 'application/json' } });
+      const data = await response.json();
+      if (!response.ok) throw new Error('HISTORY_UNAVAILABLE');
+      if (!data.ok || data.source !== 'sqlserver' || data.conversationId !== record.id ||
+        data.limit !== HISTORY_PAGE_SIZE || data.order !== 'ascending' || typeof data.hasMore !== 'boolean' ||
+        !Number.isSafeInteger(data.total) || data.total < 0 || !Array.isArray(data.messages) ||
+        (data.nextCursor !== null && (typeof data.nextCursor !== 'string' || !/^[a-f0-9]{48}$/.test(data.nextCursor))) ||
+        (data.hasMore && data.nextCursor === null) || (!data.hasMore && data.nextCursor !== null) ||
+        data.messages.some(message => typeof message.id !== 'string' ||
+          (message.sentAt !== null && typeof message.sentAt !== 'string') || typeof message.text !== 'string' ||
+          typeof message.redacted !== 'boolean' || typeof message.participantLabel !== 'string' ||
+          !Number.isSafeInteger(message.senderType) || !Number.isSafeInteger(message.messageType))) {
+        throw new Error('HISTORY_INVALID');
+      }
+      if (controller.signal.aborted || detailRecord !== record) return;
+      const previousHeight = list.scrollHeight;
+      const existingIds = new Set([...list.querySelectorAll('[data-message-id]')].map(node => node.dataset.messageId));
+      const fragment = document.createDocumentFragment();
+      data.messages.filter(message => !existingIds.has(message.id)).forEach(message => fragment.append(renderHistoryMessage(message)));
+      if (loadingMore) list.prepend(fragment);
+      else list.append(fragment);
+      if (loadingMore) list.scrollTop += list.scrollHeight - previousHeight;
+      else list.scrollTop = list.scrollHeight;
+      detailCursor = data.nextCursor;
+      byId('live-detail-more').hidden = !data.hasMore;
+      status.textContent = '已显示 ' + list.childElementCount + ' / ' + data.total + ' 条';
+      if (!data.messages.length) list.append(element('p', 'live-meta', '当前会话没有可显示的文本消息。'));
+    } catch (error) {
+      if (error.name === 'AbortError' || controller.signal.aborted || detailRecord !== record) return;
+      if (!loadingMore) {
+        const fallback = element('article', 'live-message');
+        const fallbackMeta = element('div', 'live-message-meta');
+        fallbackMeta.append(element('span', '', '最近消息缓存'));
+        if (record.latestMessageRedacted) fallbackMeta.append(element('span', 'live-redacted', '含脱敏内容'));
+        fallback.append(fallbackMeta, element('p', 'live-message-text', record.latestMessage || '暂无文本消息'));
+        list.replaceChildren(fallback);
+        status.textContent = '完整记录载入失败，仅显示最近消息';
+      } else status.textContent = '更早消息载入失败';
+    } finally {
+      if (detailRecord === record && controller === detailController) {
+        detailLoading = false;
+        list.setAttribute('aria-busy', 'false');
+      }
+    }
+  }
+  function openDetail(record, trigger) {
+    detailTrigger = trigger;
     byId('live-detail-title').textContent = record.contact;
     byId('live-detail-meta').textContent = 'WhatsApp · 归属人：' + (record.assignee || '未分配') + ' · ' + timestamp(record.lastContactAt) + ' · ' + record.messageCount + ' 条消息';
-    byId('live-detail-message').textContent = record.latestMessage || '暂无文本消息';
     const dialog = byId('live-detail');
     if (typeof dialog.showModal === 'function') dialog.showModal();
-    else dialog.setAttribute('open', '');
+    else {
+      dialog.setAttribute('open', '');
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('tabindex', '-1');
+      byId('live-detail-close').focus();
+    }
+    loadDetailMessages(record, { reset: true });
   }
-  byId('live-detail-close').addEventListener('click', () => {
-    const dialog = byId('live-detail');
-    if (typeof dialog.close === 'function') dialog.close();
-    else dialog.removeAttribute('open');
+  const detailDialog = byId('live-detail');
+  detailDialog.addEventListener('close', () => {
+    if (detailController) detailController.abort();
+    detailController = null;
+    detailRecord = null;
+    detailLoading = false;
+    restoreDetailFocus();
+  });
+  detailDialog.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && typeof detailDialog.showModal !== 'function') {
+      event.preventDefault();
+      closeDetail();
+    }
+  });
+  byId('live-detail-close').addEventListener('click', closeDetail);
+  byId('live-detail-more').addEventListener('click', () => {
+    if (detailRecord) loadDetailMessages(detailRecord);
   });
   function render() {
     cards.replaceChildren();
@@ -2206,15 +2419,20 @@ init();
     byId('live-record-count').textContent = connected ? String(records.length) : '—';
     const search = byId('live-search').value.trim().toLocaleLowerCase();
     const filter = byId('live-filter').value;
+    const hasFilters = !!search || filter !== 'all';
     const rows = records.filter(r => (r.contact + ' ' + (r.assignee || '')).toLocaleLowerCase().includes(search))
       .filter(r => filter === 'all' || (filter === 'assigned' ? !!r.assignee : !r.assignee))
       .sort((a, b) => {
         const order = String(a.lastContactAt || '').localeCompare(String(b.lastContactAt || ''));
         return byId('live-sort').value === 'asc' ? order : -order;
       });
+    byId('live-reset').hidden = !hasFilters;
+    byId('live-results').textContent = loading && !connected ? '正在载入接待记录…' :
+      connected ? '显示 ' + rows.length + ' 条，共载入 ' + records.length + ' 条' + (hasFilters ? '（已筛选）' : '') :
+        '尚未载入接待记录';
     if (!rows.length) {
       cards.append(element('div', 'live-empty', loading ? '正在读取接待记录…' :
-        connected ? '当前条件没有接待记录' : '暂未载入接待记录，请检查数据源后刷新。'));
+        connected ? '当前条件没有接待记录，可清除筛选后重试。' : '暂未载入接待记录，请检查数据源后刷新。'));
     }
     rows.forEach(record => {
       const card = element('article', 'live-card');
@@ -2228,11 +2446,13 @@ init();
       owner.append(element('strong', '', '归属人：' + (record.assignee || '未分配')));
       head.append(element('div', 'live-avatar', record.contact.slice(0, 2).toUpperCase()), who, channel, owner);
       const preview = element('div', 'live-preview');
-      const button = element('button', '', '查看消息');
+      const button = element('button', '', '查看聊天记录');
       button.type = 'button';
-      button.setAttribute('aria-label', '查看 ' + record.contact + ' 的最近消息');
-      button.addEventListener('click', () => openDetail(record));
-      preview.append(element('span', 'live-meta', '最近消息'), element('p', '', record.latestMessage || '暂无文本消息'), button);
+      button.setAttribute('aria-label', '查看 ' + record.contact + ' 的聊天记录');
+      button.addEventListener('click', () => openDetail(record, button));
+      const previewLabel = element('span', 'live-meta', '最近消息');
+      if (record.latestMessageRedacted) previewLabel.append(element('span', 'live-redacted', ' · 已脱敏'));
+      preview.append(previewLabel, element('p', '', record.latestMessage || '暂无文本消息'), button);
       card.append(head, preview);
       cards.append(card);
     });
@@ -2248,15 +2468,20 @@ init();
     loading = true;
     connected = false;
     records = [];
-    byId('live-refresh').disabled = true;
+    const refreshButton = byId('live-refresh');
+    refreshButton.disabled = true;
+    refreshButton.textContent = '刷新中…';
+    refreshButton.setAttribute('aria-busy', 'true');
     cards.setAttribute('aria-busy', 'true');
     source.dataset.error = 'false';
     source.textContent = '正在读取接待数据…';
     // Clear the previous message when changing snapshots or losing connectivity.
-    byId('live-detail-close').click();
+    closeDetail();
     byId('live-detail-title').textContent = '接待详情';
     byId('live-detail-meta').textContent = '';
-    byId('live-detail-message').textContent = '';
+    byId('live-detail-history-status').textContent = '';
+    byId('live-detail-message').replaceChildren();
+    byId('live-detail-more').hidden = true;
     render();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 35000);
@@ -2269,6 +2494,7 @@ init();
         data.records.some(r => typeof r.id !== 'string' || typeof r.contact !== 'string' ||
           (r.assignee !== null && typeof r.assignee !== 'string') ||
           r.channel !== 'whatsapp' || typeof r.latestMessage !== 'string' ||
+          (r.latestMessageRedacted !== undefined && typeof r.latestMessageRedacted !== 'boolean') ||
           (r.lastContactAt !== null && typeof r.lastContactAt !== 'string') ||
           !Number.isSafeInteger(r.messageCount) || r.messageCount < 1)) {
         throw new Error('接待数据格式异常，请联系管理员。');
@@ -2285,26 +2511,228 @@ init();
     } finally {
       clearTimeout(timeout);
       loading = false;
-      byId('live-refresh').disabled = false;
+      refreshButton.disabled = false;
+      refreshButton.textContent = '刷新数据';
+      refreshButton.setAttribute('aria-busy', 'false');
       cards.setAttribute('aria-busy', 'false');
       render();
     }
   }
+  function selectStage(stage, note) {
+    selectedStage = stage;
+    document.querySelectorAll('[data-live-stage]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.liveStage === stage)));
+    byId('live-stage-note').textContent = note || notes[stage];
+  }
   document.querySelectorAll('[data-live-stage]').forEach(button => button.addEventListener('click', () => {
-    selectedStage = button.dataset.liveStage;
-    document.querySelectorAll('[data-live-stage]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-    byId('live-stage-note').textContent = notes[selectedStage];
+    selectStage(button.dataset.liveStage);
     byId('live-filter').value = selectedStage === 'assignment' ? 'assigned' : 'all';
     render();
   }));
   byId('live-search').addEventListener('input', render);
-  byId('live-filter').addEventListener('change', render);
+  byId('live-filter').addEventListener('change', () => {
+    const filter = byId('live-filter').value;
+    selectStage(filter === 'assigned' ? 'assignment' : 'records', filter === 'unassigned' ?
+      '显示尚未关联归属人的会话；可通过消息源补充归属信息。' : undefined);
+    render();
+  });
   byId('live-sort').addEventListener('change', render);
+  byId('live-reset').addEventListener('click', () => {
+    byId('live-search').value = '';
+    byId('live-filter').value = 'all';
+    selectStage('records');
+    render();
+    byId('live-search').focus();
+  });
   byId('live-refresh').addEventListener('click', refresh);
   render();
   // Historical jsdom regressions have no fetch. They still exercise the original demo.
   if (typeof window.fetch === 'function') refresh();
   else { loading = false; cards.setAttribute('aria-busy', 'false'); source.textContent = '请通过本地接待服务打开工作台。'; }
+})();
+
+(function () {
+  'use strict';
+  const form = document.getElementById('assistant-form');
+  const thread = document.getElementById('assistant-thread');
+  const input = document.getElementById('assistant-input');
+  const access = document.getElementById('assistant-access');
+  const send = document.getElementById('assistant-send');
+  const clear = document.getElementById('assistant-clear');
+  const status = document.getElementById('assistant-status');
+  const modelLabel = document.getElementById('assistant-model');
+  const messages = [];
+  const MAX_ASSISTANT_CONTEXT_CHARS = 50000;
+  let busy = false;
+  const errors = {
+    AI_ACCESS_REQUIRED: 'AI 访问口令不正确或未填写。',
+    AI_ACCESS_NOT_CONFIGURED: '服务器尚未配置 AI 独立访问口令。',
+    AI_NOT_CONFIGURED: '服务器尚未配置 Claude API。',
+    AI_AUTH_FAILED: 'Claude API 凭证无效，请联系管理员。',
+    AI_CONFIGURATION_ERROR: 'Claude 模型或组织权限配置异常，请联系管理员。',
+    AI_RATE_LIMITED: '请求过于频繁，请稍后再试。',
+    AI_BUSY: '助手正在处理另一条需求，请稍后再试。',
+    AI_TEMPORARY_UNAVAILABLE: 'Claude 服务暂时不可用，请稍后重试。',
+    AI_REFUSED: '该请求未能处理，请调整描述后重试。',
+    AI_RESPONSE_TRUNCATED: '回复未完整生成，请缩小需求范围后重试。',
+    AI_INCOMPLETE_RESPONSE: '回复未完整结束，请重试。',
+    AI_INVALID_REQUEST: '对话格式无效，请清空后重试。',
+    AI_REQUEST_TOO_LARGE: '对话内容过长，请清空后拆分需求。',
+    AI_UNSUPPORTED_MEDIA_TYPE: '请求格式不受支持。',
+    AI_FAILED: 'AI 请求失败，请稍后重试。'
+  };
+  function emptyState() {
+    const node = document.createElement('p');
+    node.className = 'assistant-empty';
+    node.id = 'assistant-empty';
+    node.append('例如：“把接待卡片改得更紧凑，并在手机上优先显示归属人。”', document.createElement('br'),
+      'Claude 会先说明方案、影响范围和验收标准。');
+    return node;
+  }
+  function appendMessage(role, content, isError = false) {
+    const empty = document.getElementById('assistant-empty');
+    if (empty) empty.remove();
+    const node = document.createElement('article');
+    node.className = 'assistant-message';
+    node.dataset.role = role;
+    if (isError) node.dataset.error = 'true';
+    node.textContent = content;
+    thread.append(node);
+    thread.scrollTop = thread.scrollHeight;
+    return node;
+  }
+  function decodeSseBlock(block) {
+    let event = 'message';
+    const data = [];
+    block.replace(/\r/g, '').split('\n').forEach(line => {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) data.push(line.slice(5).trimStart());
+    });
+    if (!data.length) return null;
+    try { return { event, data: JSON.parse(data.join('\n')) }; }
+    catch { throw new Error('AI_FAILED'); }
+  }
+  async function streamEvents(response, onEvent) {
+    if (!response.body || typeof response.body.getReader !== 'function') throw new Error('AI_FAILED');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+      const blocks = buffer.replace(/\r\n/g, '\n').split('\n\n');
+      buffer = blocks.pop();
+      blocks.forEach(block => {
+        const parsed = decodeSseBlock(block);
+        if (parsed) onEvent(parsed);
+      });
+      if (done) break;
+    }
+    if (buffer.trim()) {
+      const parsed = decodeSseBlock(buffer);
+      if (parsed) onEvent(parsed);
+    }
+  }
+  function setBusy(value) {
+    busy = value;
+    send.disabled = value;
+    clear.disabled = value;
+    input.disabled = value;
+    access.disabled = value;
+    thread.setAttribute('aria-busy', String(value));
+  }
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (busy) return;
+    const text = input.value.trim();
+    const token = access.value;
+    if (!text) return input.focus();
+    if (token.length < 16) {
+      status.textContent = errors.AI_ACCESS_REQUIRED;
+      return access.focus();
+    }
+    const contextChars = () => messages.reduce((total, message) => total + message.content.length, 0);
+    while (messages.length >= 19 || contextChars() + text.length > MAX_ASSISTANT_CONTEXT_CHARS) messages.splice(0, 2);
+    const userMessage = { role: 'user', content: text };
+    messages.push(userMessage);
+    appendMessage('user', text);
+    input.value = '';
+    const assistantNode = appendMessage('assistant', '');
+    let assistantText = '';
+    let finished = false;
+    let paintScheduled = false;
+    const paintAssistant = force => {
+      if (force) {
+        assistantNode.textContent = assistantText;
+        thread.scrollTop = thread.scrollHeight;
+        return;
+      }
+      if (paintScheduled) return;
+      paintScheduled = true;
+      const schedule = window.requestAnimationFrame || (callback => setTimeout(callback, 16));
+      schedule(() => {
+        paintScheduled = false;
+        if (!assistantNode.isConnected) return;
+        assistantNode.textContent = assistantText;
+        thread.scrollTop = thread.scrollHeight;
+      });
+    };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 130000);
+    setBusy(true);
+    status.textContent = 'Claude 正在分析并生成优化方案…';
+    try {
+      const response = await fetch('/api/assistant/chat', {
+        method: 'POST',
+        cache: 'no-store',
+        signal: controller.signal,
+        headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json', 'X-Witop-AI-Access': token },
+        body: JSON.stringify({ messages })
+      });
+      if (!response.ok) {
+        let code = 'AI_FAILED';
+        try { code = (await response.json()).error || code; } catch {}
+        throw new Error(code);
+      }
+      await streamEvents(response, ({ event: eventName, data }) => {
+        if (eventName === 'meta' && typeof data.model === 'string') modelLabel.textContent = data.model;
+        else if (eventName === 'delta' && typeof data.text === 'string') {
+          assistantText += data.text;
+          paintAssistant(false);
+        } else if (eventName === 'done') {
+          finished = true;
+          if (typeof data.model === 'string') modelLabel.textContent = data.model;
+        } else if (eventName === 'error') throw new Error(typeof data.error === 'string' ? data.error : 'AI_FAILED');
+      });
+      paintAssistant(true);
+      if (!finished || !assistantText.trim()) throw new Error('AI_INCOMPLETE_RESPONSE');
+      messages.push({ role: 'assistant', content: assistantText });
+      status.textContent = '方案已生成；代码变更仍需走分支、测试和审批。';
+    } catch (error) {
+      assistantNode.remove();
+      const code = error.name === 'AbortError' ? 'AI_TEMPORARY_UNAVAILABLE' : error.message;
+      const errorText = errors[code] || errors.AI_FAILED;
+      appendMessage('assistant', errorText, true);
+      messages.push({ role: 'assistant', content: '上一次请求未成功生成回复，请根据用户的后续指示继续。' });
+      status.textContent = errorText;
+    } finally {
+      clearTimeout(timeout);
+      setBusy(false);
+      input.focus();
+    }
+  });
+  clear.addEventListener('click', () => {
+    if (busy) return;
+    messages.splice(0);
+    thread.replaceChildren(emptyState());
+    status.textContent = '对话已清空；访问口令仍仅保存在当前页面内存。';
+    input.focus();
+  });
+  input.addEventListener('keydown', event => {
+    if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      event.preventDefault();
+      form.requestSubmit();
+    }
+  });
 })();
 </script>
 </body>

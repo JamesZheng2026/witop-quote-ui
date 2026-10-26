@@ -27,7 +27,7 @@ function request(server, url, { method = 'GET', headers = {} } = {}) {
 }
 async function unit() {
   let calls = 0;
-  const server = createServer({ query: async options => { check(options, { limit: 50 }); calls++; return payload; } });
+  const server = createServer({ query: async options => { check(options, { mode: 'receptions', limit: 50, offset: 0 }); calls++; return payload; } });
   const before = Date.now();
   const health = await request(server, '/healthz');
   check(health.status, 200);

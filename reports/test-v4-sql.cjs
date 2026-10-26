@@ -23,12 +23,30 @@ class Cursor:
         if 'INFORMATION_SCHEMA' in sql:
             assert params==('wa_chat_message',)
             self.rows=[{'TABLE_SCHEMA':'dbo','COLUMN_NAME':name,'DATA_TYPE':kind} for name,kind in
-                [('session_id','int'),('agent','nvarchar'),('send_time','nvarchar'),('create_at','nvarchar'),('msg_content','nvarchar'),('id','int')]]
+                [('session_id','int'),('agent','nvarchar'),('send_time','nvarchar'),('create_at','nvarchar'),('msg_content','nvarchar'),('id','int'),
+                 ('sender_type','tinyint'),('sender_phone','nvarchar'),('msg_type','tinyint')]]
             if os.environ.get('V4_FIXTURE_BAD_SCHEMA'): self.rows[2]['DATA_TYPE']='datetime'
         elif 'DB_NAME' in sql:
             self.rows=[{'db':'fixture','version':'Fixture SQL Server'}]
         elif 'COUNT_BIG(*) AS total' in sql:
-            self.rows=[{'total':4}]
+            if params is None: self.rows=[{'total':4}]
+            else:
+                assert params==('1','Owner A')
+                self.rows=[{'total':2}]
+        elif 'WITH messages AS' in sql:
+            assert params[:2]==('1','Owner A')
+            assert params[-1]==3
+            assert 'WHERE CONVERT(nvarchar(max),[session_id])=%s' in sql
+            assert "COALESCE(CONVERT(nvarchar(max),[agent]),N'')=%s" in sql
+            assert 'OFFSET 0 ROWS FETCH NEXT %s ROWS ONLY' in sql
+            if len(params) > 3:
+                assert params[2:5]==('2026-06-24 01:58:50','2026-06-24 01:58:50',1)
+                self.rows=[]
+            else: self.rows=[
+              {'message_key':2,'sent_at':'2026-06-24 01:59:50','message_text':'Email buyer@example.com password=PRIVATE_MESSAGE_SECRET Authorization: Bearer sk-ant-1234567890 phone 87654321',
+               'sender_kind':1,'sender_contact':'+86 138 0000 1234','message_kind':1},
+              {'message_key':1,'sent_at':'2026-06-24 01:58:50','message_text':'Call +86 138 0000 1234',
+               'sender_kind':None,'sender_contact':'+86 138 0000 1234','message_kind':None}]
         elif 'WITH ranked AS' in sql:
             assert params==(5,)
             assert 'PARTITION BY COALESCE(CONVERT(nvarchar(max),[agent])' in sql
@@ -74,8 +92,33 @@ try {
   assert.equal(data.serviceStatusAvailable, false);
   assert.equal(data.records[0].hasMessage, true);
   assert.equal(data.records[0].messageCount, 2);
+  const historyOutput = execFileSync(process.execPath, ['-e',
+    `const bridge=require(process.argv[1]);bridge.querySqlServer({mode:'messages',limit:2,conversation:{chatKey:'1',ownerName:'Owner A'}}).then(r=>process.stdout.write(JSON.stringify(r))).catch(e=>{process.stderr.write(JSON.stringify({error:e.message}));process.exitCode=1})`, bridge],
+    { env: environment, encoding: 'utf8' });
+  assert(!historyOutput.includes('buyer@example.com'));
+  assert(!historyOutput.includes('+86 138 0000 1234'));
+  assert(!historyOutput.includes('PRIVATE_MESSAGE_SECRET'));
+  assert(!historyOutput.includes('sk-ant-1234567890'));
+  assert(!historyOutput.includes('87654321'));
+  const history = JSON.parse(historyOutput);
+  assert.equal(history.ok, true);
+  assert.equal(history.messages.length, 2);
+  assert.equal(history.messages[0].sentAt, '2026-06-24 01:58:50', 'Message page is returned oldest-to-newest');
+  assert.equal(history.messages[0].senderType, -1, 'Nullable sender metadata does not fail the whole conversation');
+  assert.equal(history.messages[0].messageType, -1);
+  assert.equal(Object.hasOwn(history.messages[0], 'participantId'), false, 'No reversible cross-conversation participant hash is exposed');
+  assert.equal(history.messages[1].redacted, true);
+  assert.match(history.messages[0].participantLabel, /^尾号 /);
+  assert.equal(history.total, 2);
+  assert.equal(history.hasMore, false);
+  assert.equal(history.order, 'ascending');
+  const emptyHistory = JSON.parse(execFileSync(process.execPath, ['-e',
+    `const bridge=require(process.argv[1]);bridge.querySqlServer({mode:'messages',limit:2,conversation:{chatKey:'1',ownerName:'Owner A'},cursor:{sentAt:'2026-06-24 01:58:50',messageKey:1}}).then(r=>process.stdout.write(JSON.stringify(r))).catch(e=>{process.stderr.write(JSON.stringify({error:e.message}));process.exitCode=1})`, bridge],
+    { env: environment, encoding: 'utf8' }));
+  assert.equal(emptyHistory.messages.length, 0);
+  assert.equal(emptyHistory.total, 2, 'A keyset page beyond the end retains the real conversation total');
   const diagnostics = JSON.parse(run(['--diagnostics']));
-  assert.equal(diagnostics.schema.length, 6);
+  assert.equal(diagnostics.schema.length, 9);
   assert.equal(diagnostics.messageCount, 4);
   assert.equal(diagnostics.handshake.driver, 'fixture-only');
   for (const [extra, expected] of [
@@ -88,7 +131,7 @@ try {
     assert.equal(JSON.parse(result.stderr).error, expected);
     assert(!(result.stdout + result.stderr).includes(sentinel));
   }
-  console.log('PASS SQL bridge: real-schema contract, unchanged nvarchar time, bounded query, agent/contact partition, stable IDs, no fabricated completion, private CLI evidence, sanitized errors (driver fixture; real SQL unverified)');
+  console.log('PASS SQL bridge: real-schema contract, paged/redacted chat history, unchanged nvarchar time, bounded queries, agent/contact partition, stable IDs, no fabricated completion, private CLI evidence, sanitized errors (driver fixture; real SQL unverified)');
 } finally {
   for (const name of ['pymssql.py', 'config.json']) fs.unlinkSync(path.join(folder, name));
   // Python may write bytecode; keep the temporary folder rather than recursively deleting it.
