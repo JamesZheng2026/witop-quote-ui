@@ -16,6 +16,8 @@
 #   ANTHROPIC_API_KEY_SOURCE absolute host path to the Claude API key file (mode 0600)
 #   WITOP_AI_ACCESS_TOKEN_FILE fixed in-container path to the separate AI access token
 #   WITOP_AI_ACCESS_TOKEN_SOURCE absolute host path to the AI access-token file (mode 0600)
+#   WITOP_AI_BASE_URL     optional AI upstream base URL (default https://api.anthropic.com)
+#   WITOP_AI_MODEL        optional model id for that upstream (default claude-opus-5-5)
 #
 # Every required value uses ":?" interpolation, so the stack fails closed instead
 # of starting with a missing image tag or an unmounted secret. They are paths
@@ -39,6 +41,13 @@ services:
       SQLSERVER_CONFIG: ${SQLSERVER_CONFIG:?Set SQLSERVER_CONFIG to /run/secrets/sqlserver_config.json}
       ANTHROPIC_API_KEY_FILE: ${ANTHROPIC_API_KEY_FILE:?Set ANTHROPIC_API_KEY_FILE to /run/secrets/anthropic_api_key}
       WITOP_AI_ACCESS_TOKEN_FILE: ${WITOP_AI_ACCESS_TOKEN_FILE:?Set WITOP_AI_ACCESS_TOKEN_FILE to /run/secrets/ai_access_token}
+      # Upstream selection for the assistant. Both are optional and default to
+      # the official Anthropic API. WITOP_AI_BASE_URL may point at any
+      # Anthropic-compatible Messages API endpoint; WITOP_AI_MODEL is the
+      # model id that endpoint understands. These are configuration, not
+      # secrets, so they are safe to keep in the environment block.
+      WITOP_AI_BASE_URL: ${WITOP_AI_BASE_URL:-https://api.anthropic.com}
+      WITOP_AI_MODEL: ${WITOP_AI_MODEL:-claude-opus-5-5}
     volumes:
       - type: bind
         source: ${SQLSERVER_CONFIG_FILE:?Set the host SQL config file path}

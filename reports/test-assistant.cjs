@@ -7,7 +7,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { createServer, createAssistantAccessVerifier } = require('../scripts/server');
-const { createClaudeAssistant, validateMessages, AssistantError } = require('../scripts/assistant');
+const { createAssistant, validateMessages, AssistantError, DEFAULT_BASE_URL } = require('../scripts/assistant');
 
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -81,7 +81,7 @@ async function main() {
       }
     };
   } } } };
-  const assistant = createClaudeAssistant({ client: mockClient });
+  const assistant = createAssistant({ client: mockClient });
   let streamed = '';
   const usage = await assistant.stream([{ role: 'user', content: '优化卡片' }], { onText: text => { streamed += text; } });
   assert.equal(streamed, '优化方案');
@@ -178,11 +178,41 @@ async function main() {
   assert.equal(unavailable.status, 503);
   assert.deepEqual(JSON.parse(unavailable.body), { error: 'AI_ACCESS_NOT_CONFIGURED' });
 
-  await rejectsCode(() => createClaudeAssistant({ client: { beta: { messages: { stream() {
+  await rejectsCode(() => createAssistant({ client: { beta: { messages: { stream() {
     return { async *[Symbol.asyncIterator]() {}, async finalMessage() { return { stop_reason: 'refusal', usage: {} }; } };
   } } } } }).stream([{ role: 'user', content: 'x' }], { onText() {} }), 'AI_REFUSED');
 
-  console.log('PASS AI assistant: official SDK request shape, adaptive thinking, default fallback, bounded history, independent access token, SSE streaming, sanitized failures, rate/concurrency gates (mock API; no billable call)');
+  // A compatible (non-Anthropic) upstream must use the plain Messages API:
+  // no beta namespace, and none of the Anthropic-only request fields.
+  let compatibleCapture;
+  const compatibleAssistant = createAssistant({
+    client: { messages: { stream(params) {
+      compatibleCapture = params;
+      return {
+        async *[Symbol.asyncIterator]() {
+          yield { type: 'content_block_delta', delta: { type: 'text_delta', text: '兼容' } };
+        },
+        async finalMessage() {
+          return { model: 'compatible-model', stop_reason: 'end_turn', usage: { input_tokens: 5, output_tokens: 2 } };
+        }
+      };
+    } } },
+    model: 'compatible-model',
+    baseURL: 'https://compatible.example/anthropic'
+  });
+  let compatibleText = '';
+  const compatibleUsage = await compatibleAssistant.stream([{ role: 'user', content: '优化卡片' }],
+    { onText: text => { compatibleText += text; } });
+  assert.equal(compatibleText, '兼容');
+  assert.deepEqual(compatibleUsage, { model: 'compatible-model', inputTokens: 5, outputTokens: 2 });
+  assert.equal(compatibleCapture.model, 'compatible-model');
+  assert.equal(compatibleCapture.thinking, undefined);
+  assert.equal(compatibleCapture.output_config, undefined);
+  assert.equal(compatibleCapture.betas, undefined);
+  assert.equal(compatibleCapture.fallbacks, undefined);
+  assert.equal(compatibleCapture.system, captured.params.system);
+
+  console.log('PASS AI assistant: official SDK request shape, adaptive thinking, default fallback, bounded history, independent access token, SSE streaming, sanitized failures, rate/concurrency gates, compatible-upstream request shape (mock API; no billable call)');
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

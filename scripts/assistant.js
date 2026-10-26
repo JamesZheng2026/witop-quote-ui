@@ -3,11 +3,22 @@
 const fs = require('node:fs/promises');
 
 const DEFAULT_MODEL = 'claude-opus-5-5';
+// Default upstream is the Anthropic API. A compatible endpoint (Anthropic
+// Messages API shape) may be selected with WITOP_AI_BASE_URL. Only the
+// official Anthropic host understands the Anthropic-only request fields
+// (adaptive thinking, effort, server-side fallback betas), so those are
+// sent to the default upstream alone.
+//
+// WITOP_AI_* names are used on purpose: the standard ANTHROPIC_BASE_URL /
+// ANTHROPIC_MODEL variables are read by the SDK from the ambient process
+// environment, which on the runner may point at an unrelated local proxy.
+// The deployment must control the upstream explicitly.
+const DEFAULT_BASE_URL = 'https://api.anthropic.com';
 const MAX_MESSAGES = 20;
 const MAX_USER_MESSAGE_CHARS = 4000;
 const MAX_ASSISTANT_MESSAGE_CHARS = 20000;
 const MAX_CONVERSATION_CHARS = 50000;
-const SYSTEM_PROMPT = `你是 Witop 接待工作台的 Claude 优化助手。用简洁、专业的中文回答。
+const SYSTEM_PROMPT = `你是 Witop 接待工作台的 AI 优化助手。用简洁、专业的中文回答。
 
 你的职责：
 - 理解用户对网页、接待流程、数据展示、可访问性和性能的修改要求。
@@ -74,8 +85,10 @@ function classifyApiError(error, Anthropic) {
   return new AssistantError('AI_FAILED');
 }
 
-function createClaudeAssistant({ client, apiKeyFile = process.env.ANTHROPIC_API_KEY_FILE,
-  model = process.env.ANTHROPIC_MODEL || DEFAULT_MODEL } = {}) {
+function createAssistant({ client, apiKeyFile = process.env.ANTHROPIC_API_KEY_FILE,
+  model = process.env.WITOP_AI_MODEL || DEFAULT_MODEL,
+  baseURL = process.env.WITOP_AI_BASE_URL || DEFAULT_BASE_URL } = {}) {
+  const anthropicUpstream = baseURL === DEFAULT_BASE_URL;
   let sdkPromise;
   let clientPromise;
   const loadSdk = () => {
@@ -89,7 +102,7 @@ function createClaudeAssistant({ client, apiKeyFile = process.env.ANTHROPIC_API_
       clientPromise = Promise.all([loadSdk(), fs.readFile(apiKeyFile, 'utf8')]).then(([sdk, raw]) => {
         const apiKey = raw.trim();
         if (!apiKey) throw new AssistantError('AI_NOT_CONFIGURED');
-        return new sdk.default({ apiKey, maxRetries: 2, timeout: 120000 });
+        return new sdk.default({ apiKey, maxRetries: 2, timeout: 120000, baseURL });
       }).catch(error => {
         clientPromise = null;
         if (error instanceof AssistantError) throw error;
@@ -108,16 +121,26 @@ function createClaudeAssistant({ client, apiKeyFile = process.env.ANTHROPIC_API_
         const sdk = await loadSdk();
         Anthropic = sdk.default;
         const api = await loadClient();
-        const stream = api.beta.messages.stream({
+        const params = {
           model,
           max_tokens: 4000,
-          thinking: { type: 'adaptive' },
-          output_config: { effort: 'low' },
           system: SYSTEM_PROMPT,
-          messages,
-          betas: ['server-side-fallback-2026-07-01'],
-          fallbacks: 'default'
-        }, signal ? { signal } : undefined);
+          messages
+        };
+        let stream;
+        if (anthropicUpstream) {
+          // Adaptive thinking, the effort dial and the server-side fallback beta
+          // are Anthropic-only features.
+          params.thinking = { type: 'adaptive' };
+          params.output_config = { effort: 'low' };
+          params.betas = ['server-side-fallback-2026-07-01'];
+          params.fallbacks = 'default';
+          stream = api.beta.messages.stream(params, signal ? { signal } : undefined);
+        } else {
+          // A compatible endpoint speaks the plain Messages API only: no beta
+          // namespace, no Anthropic-only request fields.
+          stream = api.messages.stream(params, signal ? { signal } : undefined);
+        }
         for await (const event of stream) {
           if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
             await onText(event.delta.text);
@@ -143,4 +166,12 @@ function createClaudeAssistant({ client, apiKeyFile = process.env.ANTHROPIC_API_
   };
 }
 
-module.exports = { createClaudeAssistant, validateMessages, AssistantError, DEFAULT_MODEL };
+module.exports = {
+  createAssistant,
+  // Kept for callers that still import the previous name.
+  createClaudeAssistant: createAssistant,
+  validateMessages,
+  AssistantError,
+  DEFAULT_MODEL,
+  DEFAULT_BASE_URL
+};

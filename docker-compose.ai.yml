@@ -23,6 +23,8 @@ services:
     environment:
       ANTHROPIC_API_KEY_FILE: ${ANTHROPIC_API_KEY_FILE:?Set ANTHROPIC_API_KEY_FILE to /run/secrets/anthropic_api_key}
       WITOP_AI_ACCESS_TOKEN_FILE: ${WITOP_AI_ACCESS_TOKEN_FILE:?Set WITOP_AI_ACCESS_TOKEN_FILE to /run/secrets/ai_access_token}
+      WITOP_AI_BASE_URL: ${WITOP_AI_BASE_URL:-https://api.anthropic.com}
+      WITOP_AI_MODEL: ${WITOP_AI_MODEL:-claude-opus-5-5}
     volumes:
       - type: bind
         source: ${ANTHROPIC_API_KEY_SOURCE:?Set the external host Claude API key file path}
