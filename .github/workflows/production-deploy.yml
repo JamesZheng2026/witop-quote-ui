@@ -175,6 +175,13 @@ jobs:
       ANTHROPIC_API_KEY_SOURCE: /Users/james/witop-prod/secrets/anthropic_api_key
       WITOP_AI_ACCESS_TOKEN_FILE: /run/secrets/ai_access_token
       WITOP_AI_ACCESS_TOKEN_SOURCE: /Users/james/witop-prod/secrets/ai_access_token
+      # AI upstream selection. These are configuration, not secrets, so they
+      # come from repository/environment variables and fall back to the
+      # official Anthropic API. Set WITOP_AI_BASE_URL to any
+      # Anthropic-compatible Messages API endpoint and WITOP_AI_MODEL to the
+      # model id that endpoint understands.
+      WITOP_AI_BASE_URL: ${{ vars.WITOP_AI_BASE_URL || 'https://api.anthropic.com' }}
+      WITOP_AI_MODEL: ${{ vars.WITOP_AI_MODEL || 'claude-opus-5-5' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -517,6 +524,10 @@ jobs:
     name: Smoke (real routes, local loopback)
     needs: [deploy, preflight]
     runs-on: [self-hosted, macos, ARM64, production]
+    env:
+      # Set the repository variable WITOP_AI_SMOKE=false to skip the one
+      # billable assistant round trip in the smoke job.
+      WITOP_AI_SMOKE: ${{ vars.WITOP_AI_SMOKE || 'true' }}
     steps:
       # Probes the container port directly. 8913 is host nginx and returns 401
       # without Basic Auth, so it is not a CI target.
@@ -546,6 +557,41 @@ jobs:
             FAILED=$((FAILED+1))
           else
             echo "assistant access gate -> 401 (no billable API call)"
+          fi
+          # The gate above proves routing, not that the upstream is reachable
+          # with the deployed credentials. A credential or model mismatch would
+          # pass that probe and only surface for real users, so verify one
+          # authenticated round trip here. It costs one short completion.
+          # Read the access token from the file the deploy job already
+          # staged on this runner. Declaring environment:production here would
+          # demand a second manual approval, so the file is used instead.
+          AI_TOKEN_FILE=/Users/james/witop-prod/secrets/ai_access_token
+          if [ ! -r "$AI_TOKEN_FILE" ]; then
+            echo "::error::AI access token file is not readable on this runner"
+            FAILED=$((FAILED+1))
+          fi
+          if [ "${WITOP_AI_SMOKE:-true}" = "true" ]; then
+            # Pass the token through a header file so it never appears in the
+            # curl argv (visible in the process list).
+            AI_HEADER_FILE=$(mktemp)
+            chmod 600 "$AI_HEADER_FILE"
+            printf 'X-Witop-AI-Access: %s\n' "$(cat "$AI_TOKEN_FILE")" > "$AI_HEADER_FILE"
+            assistant_body=$(curl -sS --max-time 120 \
+              -X POST -H 'Content-Type: application/json' \
+              -H "@$AI_HEADER_FILE" \
+              --data '{"messages":[{"role":"user","content":"回复 OK"}]}' \
+              "http://127.0.0.1:$APP_PORT/api/assistant/chat" || true)
+            rm -f "$AI_HEADER_FILE"
+            if printf '%s' "$assistant_body" | grep -q 'event: done'; then
+              echo "assistant upstream round trip -> done"
+            else
+              echo "::error::assistant upstream round trip failed (no done event)"
+              printf '%s' "$assistant_body" | head -c 400
+              echo
+              FAILED=$((FAILED+1))
+            fi
+          else
+            echo "assistant upstream round trip -> skipped (WITOP_AI_SMOKE=false)"
           fi
           if [ "$FAILED" -gt 0 ]; then
             echo "::error::$FAILED smoke probe(s) failed."

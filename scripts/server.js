@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { querySqlServer, conversationRefFor, messageCursorFor } = require('./sqlserver-bridge');
-const { createClaudeAssistant, validateMessages, AssistantError } = require('./assistant');
+const { createAssistant, validateMessages, AssistantError } = require('./assistant');
 const ROOT = path.resolve(__dirname, '..');
 const STATIC = new Set(['index.html', 'scripts/state.js', 'scripts/reception-bridge.js',
   'scripts/okki-adapter.js', 'scripts/variants.js', 'scripts/build-info.json']);
@@ -91,7 +91,7 @@ function sse(res, event, data) {
   res.write('data: ' + JSON.stringify(data) + '\n\n');
 }
 
-function createServer({ query = querySqlServer, assistant = createClaudeAssistant(),
+function createServer({ query = querySqlServer, assistant = createAssistant(),
   verifyAssistantAccess = createAssistantAccessVerifier(), limitAssistant = createAssistantRateLimiter(),
   limitAssistantAuth = createAssistantRateLimiter({ limit: 30 }) } = {}) {
   let pendingReceptions;

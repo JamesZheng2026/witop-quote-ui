@@ -221,7 +221,7 @@
   <aside class="v4-sidebar no-print" aria-label="主导航">
     <nav>
       <button class="sidebar-item active" title="接待工作台" aria-label="接待工作台" onclick="showView('reception-live')" id="nav-reception-live">◈</button>
-      <button class="sidebar-item" title="Claude 优化助手" aria-label="Claude 优化助手" onclick="showView('ai-assistant')" id="nav-ai-assistant">✦</button>
+      <button class="sidebar-item" title="AI 优化助手" aria-label="AI 优化助手" onclick="showView('ai-assistant')" id="nav-ai-assistant">✦</button>
       <button class="sidebar-item" title="询盘列表（演示）" aria-label="询盘列表（演示）" onclick="showView('inquiries')" id="nav-inquiries">▤</button>
       <button class="sidebar-item" title="AI 报价（演示）" aria-label="AI 报价（演示）" onclick="showView('quote-panel')" id="nav-quote-panel">▦</button>
       <button class="sidebar-item" title="质检报告（演示）" aria-label="质检报告（演示）" onclick="showView('quality-report')" id="nav-quality-report">✓</button>
@@ -263,18 +263,18 @@
       </dialog>
     </section>
 
-    <section id="view-ai-assistant" class="view hidden" aria-label="Claude 优化助手">
+    <section id="view-ai-assistant" class="view hidden" aria-label="AI 优化助手">
       <div class="assistant-shell">
         <header class="assistant-header">
-          <div><h1>Claude 优化助手</h1><p>描述你想修改的页面、流程或交互，实时生成可审核的优化方案。</p></div>
-          <span class="assistant-model" id="assistant-model">Claude Opus 5.5</span>
+          <div><h1>AI 优化助手</h1><p>描述你想修改的页面、流程或交互，实时生成可审核的优化方案。</p></div>
+          <span class="assistant-model" id="assistant-model">AI 模型</span>
         </header>
         <div class="assistant-boundary" role="note">
           安全边界：AI 只接收你在此输入的文字，不读取客户聊天或 SQL 数据；疑似密钥、邮箱和电话会先在服务端脱敏。当前版本不会从公网直接写生产文件；代码变更必须经过 Git 分支、自动测试、PR 审核和 production 审批。
         </div>
         <div class="assistant-panel">
           <div id="assistant-thread" role="log" aria-live="polite" aria-busy="false">
-            <p class="assistant-empty" id="assistant-empty">例如：“把接待卡片改得更紧凑，并在手机上优先显示归属人。”<br>Claude 会先说明方案、影响范围和验收标准。</p>
+            <p class="assistant-empty" id="assistant-empty">例如：“把接待卡片改得更紧凑，并在手机上优先显示归属人。”<br>助手会先说明方案、影响范围和验收标准。</p>
           </div>
           <form id="assistant-form" class="assistant-form">
             <div class="assistant-access"><label for="assistant-access">AI 独立访问口令</label><input id="assistant-access" type="password" autocomplete="off" minlength="16" maxlength="256" placeholder="仅保存在当前页面内存，不写入浏览器存储"></div>
@@ -2566,12 +2566,12 @@ init();
   const errors = {
     AI_ACCESS_REQUIRED: 'AI 访问口令不正确或未填写。',
     AI_ACCESS_NOT_CONFIGURED: '服务器尚未配置 AI 独立访问口令。',
-    AI_NOT_CONFIGURED: '服务器尚未配置 Claude API。',
-    AI_AUTH_FAILED: 'Claude API 凭证无效，请联系管理员。',
-    AI_CONFIGURATION_ERROR: 'Claude 模型或组织权限配置异常，请联系管理员。',
+    AI_NOT_CONFIGURED: '服务器尚未配置 AI 上游服务。',
+    AI_AUTH_FAILED: 'AI 上游凭证无效，请联系管理员。',
+    AI_CONFIGURATION_ERROR: 'AI 模型或上游权限配置异常，请联系管理员。',
     AI_RATE_LIMITED: '请求过于频繁，请稍后再试。',
     AI_BUSY: '助手正在处理另一条需求，请稍后再试。',
-    AI_TEMPORARY_UNAVAILABLE: 'Claude 服务暂时不可用，请稍后重试。',
+    AI_TEMPORARY_UNAVAILABLE: 'AI 服务暂时不可用，请稍后重试。',
     AI_REFUSED: '该请求未能处理，请调整描述后重试。',
     AI_RESPONSE_TRUNCATED: '回复未完整生成，请缩小需求范围后重试。',
     AI_INCOMPLETE_RESPONSE: '回复未完整结束，请重试。',
@@ -2585,7 +2585,7 @@ init();
     node.className = 'assistant-empty';
     node.id = 'assistant-empty';
     node.append('例如：“把接待卡片改得更紧凑，并在手机上优先显示归属人。”', document.createElement('br'),
-      'Claude 会先说明方案、影响范围和验收标准。');
+      '助手会先说明方案、影响范围和验收标准。');
     return node;
   }
   function appendMessage(role, content, isError = false) {
@@ -2679,7 +2679,7 @@ init();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 130000);
     setBusy(true);
-    status.textContent = 'Claude 正在分析并生成优化方案…';
+    status.textContent = '助手正在分析并生成优化方案…';
     try {
       const response = await fetch('/api/assistant/chat', {
         method: 'POST',
