@@ -61,6 +61,14 @@ node scripts/server.js
 
 不要把真实秘密放在命令行参数或 `.env.production.example` 中。
 
+用 Docker 本地起栈时，基础 `docker-compose.yml` 不含任何 Claude 凭证，因此 CI、staging 和只连 SQL 的场景可以无秘密启动。需要助手的本地环境叠加覆盖文件：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.ai.yml up -d
+```
+
+`docker-compose.ai.yml` 额外要求 `ANTHROPIC_API_KEY_FILE` / `ANTHROPIC_API_KEY_SOURCE` / `WITOP_AI_ACCESS_TOKEN_FILE` / `WITOP_AI_ACCESS_TOKEN_SOURCE` 四个路径变量，缺失时同样 fail-closed。生产使用自包含的 `docker-compose.prod.yml`，不使用该覆盖文件。
+
 ## 验证
 
 以下测试全部使用注入的 mock 客户端，不调用真实 Claude API、不会产生 API 费用：

@@ -1,0 +1,38 @@
+# docker-compose.ai.yml — Claude assistant override for the base stack.
+#
+# The base docker-compose.yml is intentionally free of Claude credentials so
+# CI, staging and local SQL-only runs start without any secret material. This
+# override adds the assistant to the same `app` service:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.ai.yml up -d
+#
+# Production does NOT use this file: docker-compose.prod.yml already carries
+# the assistant mounts and stays self-contained.
+#
+# Required environment (paths and tokens only — never inline key material):
+#   ANTHROPIC_API_KEY_FILE    fixed in-container path, /run/secrets/anthropic_api_key
+#   ANTHROPIC_API_KEY_SOURCE  absolute host path to the Claude API key file (mode 0600)
+#   WITOP_AI_ACCESS_TOKEN_FILE fixed in-container path, /run/secrets/ai_access_token
+#   WITOP_AI_ACCESS_TOKEN_SOURCE absolute host path to the AI access-token file (mode 0600)
+#
+# Every value uses ":?" interpolation, so the stack fails closed instead of
+# starting an assistant without a key or an access token.
+
+services:
+  app:
+    environment:
+      ANTHROPIC_API_KEY_FILE: ${ANTHROPIC_API_KEY_FILE:?Set ANTHROPIC_API_KEY_FILE to /run/secrets/anthropic_api_key}
+      WITOP_AI_ACCESS_TOKEN_FILE: ${WITOP_AI_ACCESS_TOKEN_FILE:?Set WITOP_AI_ACCESS_TOKEN_FILE to /run/secrets/ai_access_token}
+    volumes:
+      - type: bind
+        source: ${ANTHROPIC_API_KEY_SOURCE:?Set the external host Claude API key file path}
+        target: /run/secrets/anthropic_api_key
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${WITOP_AI_ACCESS_TOKEN_SOURCE:?Set the external host AI access-token file path}
+        target: /run/secrets/ai_access_token
+        read_only: true
+        bind:
+          create_host_path: false
