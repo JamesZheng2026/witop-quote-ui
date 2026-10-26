@@ -180,3 +180,7 @@ Summary: PASS 9 / FAIL 0 (historical bug, patch, current worktree)
 外部流程在本次验证期间已提交并推送草案 `c0f2816`；后续仅追加 Node 版本和文档证据修正，保留该提交。GitHub 当前身份及仓库 push 权限已只读核实，未输出认证材料。
 
 当前仍无 Docker/Nginx 可执行文件；镜像构建、Python 3.11/pymssql 容器组合、大小、冷启动、五分钟容器健康、TLS/认证/CORS 和回滚均未验收。`reception.witop.com` 当前 DNS 未解析，也未提供目标生产主机。真实 SQL 接口验证不替代业务审核员内容抽样。`visual_skipped=true`。
+
+## 2026-10-27 Stage 1 正式验收报告索引
+
+[Stage 1 正式验收报告（run 40315544601）](STAGE1-ACCEPTANCE.md)：归档 Hermes 2026-10-26/27 实测事实、版本与部署证据、安全边界、未收口项及回滚指引；上文历史记录保留原验收时间与适用范围。
