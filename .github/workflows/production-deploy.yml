@@ -1,4 +1,4 @@
-# production-deploy.yml — v0.8 (Phase 6 Stage 1, Mac Studio local deploy)
+# production-deploy.yml — version: package.json; rules: docs/deploy/VERSIONING.md
 # Shared SQL database plan A: Agent / agent_agent.
 # SQL access is a read-only connectivity gate; all production mutations remain
 # in the single deploy job behind environment:production manual approval.
@@ -186,7 +186,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
 
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -294,6 +294,15 @@ jobs:
       # --- 5. Build the release image locally ---------------------------------
       # Skip docker/setup-buildx-action entirely: buildx invokes the osxkeychain
       # helper for every base-image pull, which fails under launchd.
+      - name: Generate build metadata for this checkout
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/build.js
+          # A ref may move while queued; never build a different commit than this run.
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
       - name: Build Docker image
         run: |
           set -euo pipefail

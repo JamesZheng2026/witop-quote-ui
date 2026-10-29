@@ -73,7 +73,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.sha }}
           fetch-depth: 1
 
       # Fix: remove credsStore=osxkeychain from Docker config.
@@ -154,6 +154,15 @@ jobs:
       # Skip docker/setup-buildx-action entirely — buildx invokes osxkeychain helper for every
       # image pull (even public), which fails under launchd (no keychain session).
       # Use plain 'docker build' which does not use the helper.
+
+      - name: Generate build metadata for this checkout
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/build.js
+          # A ref may move while queued; never build a different commit than this run.
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
 
       - name: Build Docker image
         id: build
